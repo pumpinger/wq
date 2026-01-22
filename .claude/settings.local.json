@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git clone:*)",
+      "Bash(tree:*)",
+      "WebSearch",
+      "Bash(npm install:*)",
+      "Bash(claude mcp add:*)"
+    ]
+  }
+}
