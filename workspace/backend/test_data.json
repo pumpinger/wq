@@ -1,0 +1,9 @@
+{
+  "name": "测试客户ABC",
+  "address": "北京市朝阳区",
+  "template_id": 1,
+  "field_values": [
+    {"field_id": 1, "value": "制造业"},
+    {"field_id": 2, "value": "A级(重要)"}
+  ]
+}
