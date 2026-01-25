@@ -54,10 +54,16 @@
       "Bash(cmd //c \"taskkill /f /pid 23832 & taskkill /f /pid 7604 & taskkill /f /pid 21908\" ping -n 3 127.0.0.1 netstat -ano)",
       "Bash(find:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(gh auth status:*)",
+      "Bash(where gh:*)",
+      "Bash(winget install:*)",
+      "Bash(cmd /c \"gh auth status\")",
+      "Bash(\"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" auth status)",
+      "Bash(\"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" auth login --web -h github.com)",
+      "Bash(\"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" repo create wq --private --source=. --remote=origin --push)",
+      "Bash(ls:*)"
     ]
   },
-  "enabledPlugins": {
-    "github@claude-plugins-official": true
-  }
+  "enabledPlugins": {}
 }
