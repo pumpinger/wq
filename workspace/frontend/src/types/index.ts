@@ -48,3 +48,13 @@ export interface Customer {
   updated_at: string;
   field_values?: CustomerFieldValue[];
 }
+
+// 自定义字段筛选操作符
+export type CustomFieldFilterOperator = 'eq' | 'contains' | 'gte' | 'lte' | 'in';
+
+// 自定义字段筛选条件
+export interface CustomFieldFilter {
+  field_id: number;
+  operator: CustomFieldFilterOperator;
+  value: any;
+}

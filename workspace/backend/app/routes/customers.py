@@ -1,16 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_
+from sqlalchemy import or_, and_, exists
 from typing import List, Optional
 from datetime import datetime, date
 from io import BytesIO
+import json
 from openpyxl import Workbook
 
 from ..database import get_db
 from ..models import Customer, CustomerFieldValue, CustomerTemplate, TemplateField, FieldDefinition
 from ..models.user import User
 from ..schemas import CustomerCreate, CustomerUpdate, CustomerResponse, CustomerDetail
+from ..schemas.customer import CustomFieldFilter, CustomFieldFilterOperator
 from ..core.deps import get_current_active_user, get_effective_tenant_id, require_tenant_context
 
 router = APIRouter(prefix="/customers", tags=["客户管理"])
@@ -58,6 +60,125 @@ def get_customer_query(db: Session, current_user: User, tenant_id: Optional[int]
     return query
 
 
+def apply_custom_filters(query, custom_filters: List[CustomFieldFilter], db: Session):
+    """应用自定义字段筛选条件
+
+    JSON 字段存储说明：
+    - text: 存储为 JSON 字符串，如 "hello world"
+    - number: 存储为 JSON 数字，如 123 或 123.45
+    - date: 存储为 JSON 字符串，如 "2024-01-15"
+    - select: 存储为 JSON 字符串，如 "选项A"
+    - multi_select: 存储为 JSON 数组，如 ["选项A", "选项B"]
+    """
+    # 预先批量查询所有需要的字段定义，避免 N+1 问题
+    field_ids = [cf.field_id for cf in custom_filters]
+    field_defs = {f.id: f for f in db.query(FieldDefinition).filter(FieldDefinition.id.in_(field_ids)).all()}
+
+    for cf in custom_filters:
+        field_id = cf.field_id
+        operator = cf.operator
+        value = cf.value
+
+        field_def = field_defs.get(field_id)
+        if not field_def:
+            continue
+
+        # 构建子查询条件
+        if operator == CustomFieldFilterOperator.EQ:
+            # 精确匹配（select 类型）- JSON 字符串存储
+            subquery = exists().where(
+                and_(
+                    CustomerFieldValue.customer_id == Customer.id,
+                    CustomerFieldValue.field_id == field_id,
+                    CustomerFieldValue.value == value  # SQLAlchemy JSON 类型会自动处理比较
+                )
+            )
+        elif operator == CustomFieldFilterOperator.CONTAINS:
+            # 模糊匹配（text 类型）
+            # JSON 字符串存储为 "xxx"，使用 contains 在字符串内容中搜索
+            subquery = exists().where(
+                and_(
+                    CustomerFieldValue.customer_id == Customer.id,
+                    CustomerFieldValue.field_id == field_id,
+                    CustomerFieldValue.value.as_string().contains(value)
+                )
+            )
+        elif operator == CustomFieldFilterOperator.GTE:
+            # 大于等于（number/date 类型）
+            if field_def.field_type.value == 'number':
+                try:
+                    num_value = float(value)
+                    subquery = exists().where(
+                        and_(
+                            CustomerFieldValue.customer_id == Customer.id,
+                            CustomerFieldValue.field_id == field_id,
+                            CustomerFieldValue.value.as_float() >= num_value
+                        )
+                    )
+                except (ValueError, TypeError):
+                    continue
+            else:  # date - ISO 格式字符串比较（YYYY-MM-DD 字典序等于日期序）
+                subquery = exists().where(
+                    and_(
+                        CustomerFieldValue.customer_id == Customer.id,
+                        CustomerFieldValue.field_id == field_id,
+                        CustomerFieldValue.value >= value  # JSON 字符串按字典序比较
+                    )
+                )
+        elif operator == CustomFieldFilterOperator.LTE:
+            # 小于等于（number/date 类型）
+            if field_def.field_type.value == 'number':
+                try:
+                    num_value = float(value)
+                    subquery = exists().where(
+                        and_(
+                            CustomerFieldValue.customer_id == Customer.id,
+                            CustomerFieldValue.field_id == field_id,
+                            CustomerFieldValue.value.as_float() <= num_value
+                        )
+                    )
+                except (ValueError, TypeError):
+                    continue
+            else:  # date
+                subquery = exists().where(
+                    and_(
+                        CustomerFieldValue.customer_id == Customer.id,
+                        CustomerFieldValue.field_id == field_id,
+                        CustomerFieldValue.value <= value
+                    )
+                )
+        elif operator == CustomFieldFilterOperator.IN:
+            # 包含任意一个（multi_select 类型）
+            # 存储格式为 JSON 数组 ["选项A", "选项B"]
+            # 筛选值为 ["选项A", "选项C"]，匹配有交集的记录
+            if isinstance(value, list) and len(value) > 0:
+                # 使用精确的 JSON 元素匹配，避免 "apple" 匹配 "pineapple" 的问题
+                # 匹配模式: "选项A" 后跟 ] 或 , 表示是完整元素
+                conditions = []
+                for v in value:
+                    # 构建精确匹配模式: 匹配 JSON 数组中的完整元素
+                    # 例如对于 "选项A"，匹配 "选项A"] 或 "选项A",
+                    json_element = json.dumps(v, ensure_ascii=False)  # 得到 "选项A"
+                    conditions.append(
+                        CustomerFieldValue.value.as_string().contains(json_element)
+                    )
+                subquery = exists().where(
+                    and_(
+                        CustomerFieldValue.customer_id == Customer.id,
+                        CustomerFieldValue.field_id == field_id,
+                        or_(*conditions)
+                    )
+                )
+            else:
+                continue
+        else:
+            continue
+
+        query = query.filter(subquery)
+
+    return query
+
+
 @router.get("/", response_model=List[CustomerResponse])
 def list_customers(
     request: Request,
@@ -69,6 +190,7 @@ def list_customers(
     has_coords: Optional[bool] = None,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
+    custom_filters: Optional[str] = Query(None, description="自定义字段筛选条件，JSON格式"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -110,6 +232,15 @@ def list_customers(
     if end_date:
         query = query.filter(Customer.created_at <= datetime.combine(end_date, datetime.max.time()))
 
+    # 自定义字段筛选
+    if custom_filters:
+        try:
+            filters_data = json.loads(custom_filters)
+            filters_list = [CustomFieldFilter(**f) for f in filters_data]
+            query = apply_custom_filters(query, filters_list, db)
+        except (json.JSONDecodeError, ValueError):
+            pass  # 忽略无效的筛选条件
+
     return query.order_by(Customer.created_at.desc()).offset(skip).limit(limit).all()
 
 
@@ -123,6 +254,7 @@ def export_customers(
     has_coords: Optional[bool] = None,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
+    custom_filters: Optional[str] = Query(None, description="自定义字段筛选条件，JSON格式"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -158,6 +290,15 @@ def export_customers(
         query = query.filter(Customer.created_at >= datetime.combine(start_date, datetime.min.time()))
     if end_date:
         query = query.filter(Customer.created_at <= datetime.combine(end_date, datetime.max.time()))
+
+    # 自定义字段筛选
+    if custom_filters:
+        try:
+            filters_data = json.loads(custom_filters)
+            filters_list = [CustomFieldFilter(**f) for f in filters_data]
+            query = apply_custom_filters(query, filters_list, db)
+        except (json.JSONDecodeError, ValueError):
+            pass  # 忽略无效的筛选条件
 
     customers = query.options(joinedload(Customer.field_values)).order_by(Customer.created_at.desc()).all()
 

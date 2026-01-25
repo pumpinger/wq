@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { Table, Button, Space, Modal, message, Popconfirm, Tag, Descriptions, Divider, Input, Select, DatePicker, Row, Col, Card } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, InboxOutlined, DownloadOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
+import React, { useState, useEffect } from 'react';
+import { Table, Button, Space, Modal, message, Popconfirm, Tag, Descriptions, Divider, Input, Select, DatePicker, Row, Col, Card, Collapse } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, InboxOutlined, DownloadOutlined, SearchOutlined, ReloadOutlined, FilterOutlined } from '@ant-design/icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { customerApi, templateApi, fieldApi, customerPoolApi, userApi } from '../api';
-import type { Customer, CustomerTemplate, FieldDefinition } from '../types';
+import type { Customer, CustomerTemplate, FieldDefinition, CustomFieldFilter } from '../types';
 import CustomerForm from '../components/CustomerForm';
+import DynamicFieldFilter from '../components/DynamicFieldFilter';
 
 const { RangePicker } = DatePicker;
 
@@ -16,6 +17,7 @@ interface FilterState {
   has_coords?: boolean;
   start_date?: string;
   end_date?: string;
+  customFilters?: CustomFieldFilter[];
 }
 
 const CustomerList: React.FC = () => {
@@ -31,13 +33,20 @@ const CustomerList: React.FC = () => {
   // 筛选状态
   const [filters, setFilters] = useState<FilterState>({});
 
+  // 构建 API 参数（将 customFilters 转为 JSON 字符串）
+  const buildApiParams = () => {
+    const { customFilters, ...rest } = filters;
+    const params: any = { ...rest, limit: 100 };
+    if (customFilters && customFilters.length > 0) {
+      params.custom_filters = JSON.stringify(customFilters);
+    }
+    return params;
+  };
+
   // 获取客户列表
   const { data: customers, isLoading } = useQuery({
     queryKey: ['customers', filters],
-    queryFn: () => customerApi.list({
-      ...filters,
-      limit: 100,
-    }).then((res) => res.data as Customer[]),
+    queryFn: () => customerApi.list(buildApiParams()).then((res) => res.data as Customer[]),
   });
 
   // 获取模板列表
@@ -45,6 +54,25 @@ const CustomerList: React.FC = () => {
     queryKey: ['templates'],
     queryFn: () => templateApi.list().then((res) => res.data as CustomerTemplate[]),
   });
+
+  // 获取选中模板的详情（包含字段列表）
+  const { data: selectedTemplate } = useQuery({
+    queryKey: ['template', filters.template_id],
+    queryFn: () => templateApi.get(filters.template_id!).then((res) => res.data as CustomerTemplate),
+    enabled: !!filters.template_id,
+  });
+
+  // 当模板变更时，清除自定义字段筛选
+  useEffect(() => {
+    if (filters.customFilters && filters.customFilters.length > 0) {
+      // 检查筛选条件中的字段是否属于当前模板
+      const templateFieldIds = selectedTemplate?.template_fields?.map((tf) => tf.field_id) || [];
+      const validFilters = filters.customFilters.filter((f) => templateFieldIds.includes(f.field_id));
+      if (validFilters.length !== filters.customFilters.length) {
+        setFilters((prev) => ({ ...prev, customFilters: validFilters.length > 0 ? validFilters : undefined }));
+      }
+    }
+  }, [filters.template_id, selectedTemplate]);
 
   // 获取字段定义列表
   const { data: fields } = useQuery({
@@ -117,7 +145,12 @@ const CustomerList: React.FC = () => {
   const handleExport = async () => {
     try {
       message.loading({ content: '正在导出...', key: 'export' });
-      const response = await customerApi.exportExcel(filters);
+      const { customFilters, ...rest } = filters;
+      const exportParams: any = { ...rest };
+      if (customFilters && customFilters.length > 0) {
+        exportParams.custom_filters = JSON.stringify(customFilters);
+      }
+      const response = await customerApi.exportExcel(exportParams);
       const blob = new Blob([response.data], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       });
@@ -228,7 +261,12 @@ const CustomerList: React.FC = () => {
     },
   ];
 
-  const hasFilters = Object.values(filters).some(v => v !== undefined && v !== '');
+  const hasFilters = Object.entries(filters).some(([k, v]) => {
+    if (k === 'customFilters') {
+      return Array.isArray(v) && v.length > 0;
+    }
+    return v !== undefined && v !== '';
+  });
 
   return (
     <div style={{ padding: 24 }}>
@@ -312,6 +350,25 @@ const CustomerList: React.FC = () => {
             <Tag color="blue">{customers?.length || 0} 条记录</Tag>
           </Col>
         </Row>
+
+        {/* 自定义字段筛选 - 仅在选择模板后显示 */}
+        {selectedTemplate?.template_fields && selectedTemplate.template_fields.length > 0 && (
+          <Row gutter={[16, 12]} align="middle" style={{ marginTop: 12, borderTop: '1px dashed #e8e8e8', paddingTop: 12 }}>
+            <Col>
+              <FilterOutlined style={{ color: '#1890ff', marginRight: 4 }} />
+              <span style={{ color: '#666', fontSize: 13 }}>自定义字段：</span>
+            </Col>
+            {selectedTemplate.template_fields.map((tf) => (
+              <Col key={tf.id}>
+                <DynamicFieldFilter
+                  templateField={tf}
+                  value={filters.customFilters || []}
+                  onChange={(newFilters) => setFilters({ ...filters, customFilters: newFilters.length > 0 ? newFilters : undefined })}
+                />
+              </Col>
+            ))}
+          </Row>
+        )}
       </Card>
 
       {/* 操作栏 */}

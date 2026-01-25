@@ -1,7 +1,24 @@
 from pydantic import BaseModel
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Literal
 from datetime import datetime
 from decimal import Decimal
+from enum import Enum
+
+
+class CustomFieldFilterOperator(str, Enum):
+    """自定义字段筛选操作符"""
+    EQ = "eq"              # 精确匹配（select）
+    CONTAINS = "contains"  # 模糊匹配（text）
+    GTE = "gte"            # 大于等于（number/date）
+    LTE = "lte"            # 小于等于（number/date）
+    IN = "in"              # 包含任意一个（multi_select）
+
+
+class CustomFieldFilter(BaseModel):
+    """自定义字段筛选条件"""
+    field_id: int
+    operator: CustomFieldFilterOperator
+    value: Any
 
 
 class CustomerFieldValueCreate(BaseModel):

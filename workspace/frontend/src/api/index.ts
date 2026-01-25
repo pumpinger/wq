@@ -74,6 +74,7 @@ export const customerApi = {
     has_coords?: boolean;
     start_date?: string;
     end_date?: string;
+    custom_filters?: string;  // JSON 格式的自定义字段筛选条件
   }) => api.get('/customers/', { params }),
   get: (id: number) => api.get(`/customers/${id}`),
   create: (data: any) => api.post('/customers/', data),
@@ -86,6 +87,7 @@ export const customerApi = {
     has_coords?: boolean;
     start_date?: string;
     end_date?: string;
+    custom_filters?: string;  // JSON 格式的自定义字段筛选条件
   }) => api.get('/customers/export/excel', { params, responseType: 'blob' }),
 };
 
