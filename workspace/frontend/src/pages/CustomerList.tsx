@@ -3,10 +3,11 @@ import { Table, Button, Space, Modal, message, Popconfirm, Tag, Descriptions, Di
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, InboxOutlined, DownloadOutlined, SearchOutlined, ReloadOutlined, FilterOutlined } from '@ant-design/icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { customerApi, templateApi, fieldApi, customerPoolApi, userApi } from '../api';
-import type { Customer, CustomerTemplate, FieldDefinition, CustomFieldFilter } from '../types';
+import { customerApi, templateApi, fieldApi, customerPoolApi, userApi, regionApi } from '../api';
+import type { Customer, CustomerTemplate, FieldDefinition, CustomFieldFilter, Region } from '../types';
 import CustomerForm from '../components/CustomerForm';
 import DynamicFieldFilter from '../components/DynamicFieldFilter';
+import { queryKeys } from '../api/queryKeys';
 
 const { RangePicker } = DatePicker;
 
@@ -45,19 +46,19 @@ const CustomerList: React.FC = () => {
 
   // 获取客户列表
   const { data: customers, isLoading } = useQuery({
-    queryKey: ['customers', filters],
+    queryKey: queryKeys.customers.list(filters),
     queryFn: () => customerApi.list(buildApiParams()).then((res) => res.data as Customer[]),
   });
 
   // 获取模板列表
   const { data: templates } = useQuery({
-    queryKey: ['templates'],
+    queryKey: queryKeys.templates.list(),
     queryFn: () => templateApi.list().then((res) => res.data as CustomerTemplate[]),
   });
 
   // 获取选中模板的详情（包含字段列表）
   const { data: selectedTemplate } = useQuery({
-    queryKey: ['template', filters.template_id],
+    queryKey: queryKeys.templates.detail(filters.template_id!),
     queryFn: () => templateApi.get(filters.template_id!).then((res) => res.data as CustomerTemplate),
     enabled: !!filters.template_id,
   });
@@ -76,18 +77,25 @@ const CustomerList: React.FC = () => {
 
   // 获取字段定义列表
   const { data: fields } = useQuery({
-    queryKey: ['fields'],
+    queryKey: queryKeys.fields.list(),
     queryFn: () => fieldApi.list().then((res) => res.data as FieldDefinition[]),
   });
 
   // 获取用户列表（用于负责人筛选）
   const { data: users } = useQuery({
-    queryKey: ['users'],
+    queryKey: queryKeys.users.options(),
     queryFn: () => userApi.list({ page_size: 100 }).then((res) => res.data.items || []),
+  });
+
+  // 获取区域列表
+  const { data: regions } = useQuery({
+    queryKey: queryKeys.regions.list(),
+    queryFn: () => regionApi.list().then((res) => (res.data?.items || []) as Region[]),
   });
 
   const getFieldById = (id: number) => fields?.find((f) => f.id === id);
   const getTemplateById = (id: number) => templates?.find((t) => t.id === id);
+  const getRegionById = (id: number) => regions?.find((r) => r.id === id);
 
   const handleAdd = () => {
     setEditingCustomer(undefined);
@@ -110,7 +118,7 @@ const CustomerList: React.FC = () => {
     try {
       await customerApi.delete(id);
       message.success('删除成功');
-      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
     } catch (error) {
       message.error('删除失败');
     }
@@ -118,7 +126,7 @@ const CustomerList: React.FC = () => {
 
   const handleSuccess = () => {
     setModalVisible(false);
-    queryClient.invalidateQueries({ queryKey: ['customers'] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
   };
 
   // 释放到公海
@@ -134,8 +142,8 @@ const CustomerList: React.FC = () => {
       await customerPoolApi.release(releasingCustomer.id, releaseReason || undefined);
       message.success('已释放到公海');
       setReleaseModalVisible(false);
-      queryClient.invalidateQueries({ queryKey: ['customers'] });
-      queryClient.invalidateQueries({ queryKey: ['pool-customers'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.pool.all });
     } catch (error: any) {
       message.error(error.response?.data?.detail || '释放失败');
     }
@@ -184,12 +192,14 @@ const CustomerList: React.FC = () => {
       title: 'ID',
       dataIndex: 'id',
       key: 'id',
-      width: 60,
+      width: 50,
     },
     {
       title: '客户名称',
       dataIndex: 'name',
       key: 'name',
+      width: 150,
+      ellipsis: true,
     },
     {
       title: '地址',
@@ -200,7 +210,7 @@ const CustomerList: React.FC = () => {
     {
       title: '坐标',
       key: 'coords',
-      width: 80,
+      width: 60,
       render: (_: any, record: Customer) =>
         record.latitude && record.longitude
           ? <Tag color="green">有</Tag>
@@ -210,51 +220,45 @@ const CustomerList: React.FC = () => {
       title: '使用模板',
       dataIndex: 'template_id',
       key: 'template_id',
+      width: 100,
       render: (templateId: number) => {
         const template = getTemplateById(templateId);
         return template ? <Tag color="blue">{template.name}</Tag> : '-';
       },
     },
     {
+      title: '所属区域',
+      dataIndex: 'region_id',
+      key: 'region_id',
+      width: 100,
+      render: (regionId: number) => {
+        if (!regionId) return <Tag>未分配</Tag>;
+        const region = getRegionById(regionId);
+        return region ? <Tag color="orange">{region.name}</Tag> : '-';
+      },
+    },
+    {
       title: '创建时间',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (text: string) => new Date(text).toLocaleString(),
+      width: 100,
+      render: (text: string) => dayjs(text).format('MM-DD HH:mm'),
     },
     {
       title: '操作',
       key: 'action',
-      width: 280,
+      width: 190,
+      fixed: 'right' as const,
       render: (_: any, record: Customer) => (
-        <Space>
-          <Button
-            type="link"
-            icon={<EyeOutlined />}
-            onClick={() => handleView(record)}
-          >
-            查看
-          </Button>
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          >
-            编辑
-          </Button>
-          <Button
-            type="link"
-            icon={<InboxOutlined />}
-            onClick={() => handleRelease(record)}
-          >
-            释放
-          </Button>
+        <Space size={0}>
+          <Button type="link" size="small" onClick={() => handleView(record)}>查看</Button>
+          <Button type="link" size="small" onClick={() => handleEdit(record)}>编辑</Button>
+          <Button type="link" size="small" onClick={() => handleRelease(record)}>释放</Button>
           <Popconfirm
             title="确认删除此客户?"
             onConfirm={() => handleDelete(record.id)}
           >
-            <Button type="link" danger icon={<DeleteOutlined />}>
-              删除
-            </Button>
+            <Button type="link" size="small" danger>删除</Button>
           </Popconfirm>
         </Space>
       ),
@@ -269,7 +273,7 @@ const CustomerList: React.FC = () => {
   });
 
   return (
-    <div style={{ padding: 24 }}>
+    <div>
       {/* 筛选面板 */}
       <Card size="small" style={{ marginBottom: 16 }}>
         <Row gutter={[16, 12]} align="middle">
@@ -386,6 +390,7 @@ const CustomerList: React.FC = () => {
         dataSource={customers}
         rowKey="id"
         loading={isLoading}
+        scroll={{ x: 930 }}
         pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (total) => `共 ${total} 条` }}
       />
 

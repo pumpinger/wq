@@ -6,6 +6,7 @@ from .tenant import TenantCreate, TenantUpdate, TenantResponse, TenantListRespon
 from .user import UserCreate, UserUpdate, UserResponse, UserListResponse
 from .role import RoleCreate, RoleUpdate, RoleResponse, RoleListResponse, PermissionResponse
 from .customer_pool import CustomerPoolRecordResponse, ReleaseCustomerRequest, ClaimCustomerRequest, PoolCustomerResponse
+from .region import RegionCreate, RegionUpdate, RegionResponse, RegionListResponse, UserRegionAssign
 
 __all__ = [
     "FieldDefinitionCreate", "FieldDefinitionUpdate", "FieldDefinitionResponse",
@@ -15,5 +16,6 @@ __all__ = [
     "TenantCreate", "TenantUpdate", "TenantResponse", "TenantListResponse",
     "UserCreate", "UserUpdate", "UserResponse", "UserListResponse",
     "RoleCreate", "RoleUpdate", "RoleResponse", "RoleListResponse", "PermissionResponse",
-    "CustomerPoolRecordResponse", "ReleaseCustomerRequest", "ClaimCustomerRequest", "PoolCustomerResponse"
+    "CustomerPoolRecordResponse", "ReleaseCustomerRequest", "ClaimCustomerRequest", "PoolCustomerResponse",
+    "RegionCreate", "RegionUpdate", "RegionResponse", "RegionListResponse", "UserRegionAssign"
 ]

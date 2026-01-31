@@ -14,6 +14,7 @@ import {
 import { PlusOutlined, EditOutlined, DeleteOutlined, MinusCircleOutlined } from '@ant-design/icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fieldApi } from '../api';
+import { queryKeys } from '../api/queryKeys';
 import type { FieldDefinition, FieldType } from '../types';
 
 const fieldTypeLabels: Record<FieldType, string> = {
@@ -41,7 +42,7 @@ const FieldList: React.FC = () => {
   const [fieldType, setFieldType] = useState<FieldType>('text');
 
   const { data: fields, isLoading } = useQuery({
-    queryKey: ['fields'],
+    queryKey: queryKeys.fields.list(),
     queryFn: () => fieldApi.list().then((res) => res.data as FieldDefinition[]),
   });
 
@@ -68,7 +69,7 @@ const FieldList: React.FC = () => {
     try {
       await fieldApi.delete(id);
       message.success('删除成功');
-      queryClient.invalidateQueries({ queryKey: ['fields'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.fields.all });
     } catch (error: any) {
       message.error(error.response?.data?.detail || '删除失败');
     }
@@ -99,7 +100,7 @@ const FieldList: React.FC = () => {
       }
 
       setModalVisible(false);
-      queryClient.invalidateQueries({ queryKey: ['fields'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.fields.all });
     } catch (error: any) {
       message.error(error.response?.data?.detail || '操作失败');
     } finally {
@@ -118,17 +119,20 @@ const FieldList: React.FC = () => {
       title: '字段名称',
       dataIndex: 'name',
       key: 'name',
+      width: 120,
     },
     {
       title: '字段键名',
       dataIndex: 'field_key',
       key: 'field_key',
+      width: 130,
       render: (text: string) => <code>{text}</code>,
     },
     {
       title: '类型',
       dataIndex: 'field_type',
       key: 'field_type',
+      width: 100,
       render: (type: FieldType) => (
         <Tag color={fieldTypeColors[type]}>{fieldTypeLabels[type]}</Tag>
       ),
@@ -180,7 +184,7 @@ const FieldList: React.FC = () => {
   const needOptions = ['select', 'multi_select'].includes(fieldType);
 
   return (
-    <div style={{ padding: 24 }}>
+    <div>
       <div style={{ marginBottom: 16 }}>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
           添加字段
@@ -192,6 +196,7 @@ const FieldList: React.FC = () => {
         dataSource={fields}
         rowKey="id"
         loading={isLoading}
+        scroll={{ x: 800 }}
         pagination={{ pageSize: 15 }}
       />
 

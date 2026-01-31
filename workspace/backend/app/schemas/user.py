@@ -1,9 +1,9 @@
 """
 用户相关 Schema
 """
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 
 class UserBase(BaseModel):
@@ -44,6 +44,7 @@ class UserResponse(UserBase):
     tenant_id: Optional[int] = None
     manager_id: Optional[int] = None
     data_scope: Optional[str] = None
+    region_ids: List[int] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
 

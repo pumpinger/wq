@@ -24,8 +24,10 @@ import FieldList from './pages/FieldList';
 import TenantList from './pages/admin/TenantList';
 import UserList from './pages/tenant/UserList';
 import RoleList from './pages/tenant/RoleList';
+import RegionList from './pages/tenant/RegionList';
 import CustomerMap from './pages/CustomerMap';
 import CustomerPool from './pages/CustomerPool';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const { Header, Content, Sider } = Layout;
 const { Text } = Typography;
@@ -42,7 +44,12 @@ const queryClient = new QueryClient({
 // 主应用内容
 const AppContent: React.FC = () => {
   const { user, isAuthenticated, isLoading, logout, selectedTenant, isInTenantMode, exitTenantMode } = useAuth();
-  const [selectedKey, setSelectedKey] = useState('tenants');
+  const getInitialKey = () => {
+    if (user?.is_super_admin && !isInTenantMode) return 'tenants';
+    if (user?.is_super_admin || user?.role === 'tenant_admin') return 'users';
+    return 'customers';
+  };
+  const [selectedKey, setSelectedKey] = useState(getInitialKey);
   const queryClient = useQueryClient();
 
   // 超管进入/退出租户模式时重置菜单选择
@@ -141,6 +148,11 @@ const AppContent: React.FC = () => {
             icon: <SafetyOutlined />,
             label: '角色权限',
           },
+          {
+            key: 'regions',
+            icon: <EnvironmentOutlined />,
+            label: '区域管理',
+          },
         ],
       });
     }
@@ -167,6 +179,8 @@ const AppContent: React.FC = () => {
         return <FieldList />;
       case 'roles':
         return <RoleList />;
+      case 'regions':
+        return <RegionList />;
       default:
         return <CustomerList />;
     }
@@ -263,18 +277,21 @@ const AppContent: React.FC = () => {
             items={getMenuItems()}
           />
         </Sider>
-        <Layout style={{ padding: '0 24px 24px' }}>
+        <Layout style={{ padding: '0 12px 12px' }}>
           <Content
             style={{
-              padding: 24,
+              padding: 16,
               margin: 0,
               minHeight: 280,
               background: '#fff',
-              marginTop: 24,
+              marginTop: 12,
               borderRadius: 8,
+              overflow: 'auto',
             }}
           >
-            {renderContent()}
+            <ErrorBoundary>
+              {renderContent()}
+            </ErrorBoundary>
           </Content>
         </Layout>
       </Layout>

@@ -13,10 +13,12 @@ import {
   Card,
   Checkbox,
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SafetyOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SafetyOutlined, EnvironmentOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { userApi, roleApi } from '../../api';
+import { userApi, roleApi, regionApi } from '../../api';
+import { queryKeys } from '../../api/queryKeys';
 import dayjs from 'dayjs';
+import type { Region } from '../../types';
 
 interface User {
   id: number;
@@ -44,15 +46,18 @@ interface Role {
 const UserList: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [isRegionModalOpen, setIsRegionModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [roleAssignUser, setRoleAssignUser] = useState<User | null>(null);
+  const [regionAssignUser, setRegionAssignUser] = useState<User | null>(null);
   const [selectedRoleIds, setSelectedRoleIds] = useState<number[]>([]);
+  const [selectedRegionIds, setSelectedRegionIds] = useState<number[]>([]);
   const [form] = Form.useForm();
   const queryClient = useQueryClient();
 
   // 获取用户列表
   const { data, isLoading } = useQuery({
-    queryKey: ['users'],
+    queryKey: queryKeys.users.list(),
     queryFn: async () => {
       const response = await userApi.list({ page: 1, page_size: 100 });
       return response.data;
@@ -61,10 +66,19 @@ const UserList: React.FC = () => {
 
   // 获取角色列表
   const { data: roles } = useQuery({
-    queryKey: ['roles'],
+    queryKey: queryKeys.roles.list(),
     queryFn: async () => {
       const response = await roleApi.list();
       return response.data as Role[];
+    },
+  });
+
+  // 获取区域列表
+  const { data: regions } = useQuery({
+    queryKey: queryKeys.regions.list(),
+    queryFn: async () => {
+      const response = await regionApi.list();
+      return response.data?.items as Region[] || [];
     },
   });
 
@@ -73,7 +87,8 @@ const UserList: React.FC = () => {
     mutationFn: (data: any) => userApi.create(data),
     onSuccess: () => {
       message.success('用户创建成功');
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.options() });
       setIsModalOpen(false);
       form.resetFields();
     },
@@ -87,7 +102,8 @@ const UserList: React.FC = () => {
     mutationFn: ({ id, data }: { id: number; data: any }) => userApi.update(id, data),
     onSuccess: () => {
       message.success('用户更新成功');
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.options() });
       setIsModalOpen(false);
       setEditingUser(null);
       form.resetFields();
@@ -102,7 +118,8 @@ const UserList: React.FC = () => {
     mutationFn: (id: number) => userApi.delete(id),
     onSuccess: () => {
       message.success('用户删除成功');
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.options() });
     },
     onError: (error: any) => {
       message.error(error.response?.data?.detail || '删除失败');
@@ -118,6 +135,23 @@ const UserList: React.FC = () => {
       setIsRoleModalOpen(false);
       setRoleAssignUser(null);
       setSelectedRoleIds([]);
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.detail || '分配失败');
+    },
+  });
+
+  // 分配区域
+  const assignRegionsMutation = useMutation({
+    mutationFn: ({ userId, regionIds }: { userId: number; regionIds: number[] }) =>
+      regionApi.assignUserRegions(userId, regionIds),
+    onSuccess: () => {
+      message.success('区域分配成功');
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.options() });
+      setIsRegionModalOpen(false);
+      setRegionAssignUser(null);
+      setSelectedRegionIds([]);
     },
     onError: (error: any) => {
       message.error(error.response?.data?.detail || '分配失败');
@@ -176,6 +210,26 @@ const UserList: React.FC = () => {
     }
   };
 
+  const handleOpenRegionModal = async (user: User) => {
+    setRegionAssignUser(user);
+    try {
+      const response = await regionApi.getUserRegions(user.id);
+      setSelectedRegionIds(response.data.region_ids || []);
+    } catch (error) {
+      setSelectedRegionIds([]);
+    }
+    setIsRegionModalOpen(true);
+  };
+
+  const handleAssignRegions = () => {
+    if (regionAssignUser) {
+      assignRegionsMutation.mutate({
+        userId: regionAssignUser.id,
+        regionIds: selectedRegionIds,
+      });
+    }
+  };
+
   const handleAssignRoles = () => {
     if (roleAssignUser) {
       assignRolesMutation.mutate({
@@ -190,23 +244,27 @@ const UserList: React.FC = () => {
       title: '用户名',
       dataIndex: 'username',
       key: 'username',
+      width: 100,
     },
     {
       title: '姓名',
       dataIndex: 'real_name',
       key: 'real_name',
+      width: 80,
       render: (name: string) => name || '-',
     },
     {
       title: '手机号',
       dataIndex: 'phone',
       key: 'phone',
+      width: 120,
       render: (phone: string) => phone || '-',
     },
     {
       title: '上级',
       dataIndex: 'manager_id',
       key: 'manager_id',
+      width: 80,
       render: (managerId: number) => {
         if (!managerId) return '-';
         const manager = data?.items?.find((u: User) => u.id === managerId);
@@ -217,6 +275,7 @@ const UserList: React.FC = () => {
       title: '数据权限',
       dataIndex: 'data_scope',
       key: 'data_scope',
+      width: 100,
       render: (scope: string) => {
         const scopeMap: Record<string, { text: string; color: string }> = {
           self: { text: '仅自己', color: 'default' },
@@ -231,6 +290,7 @@ const UserList: React.FC = () => {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
+      width: 80,
       render: (status: string) => {
         const colorMap: Record<string, string> = {
           active: 'green',
@@ -247,36 +307,21 @@ const UserList: React.FC = () => {
       title: '创建时间',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (date: string) => dayjs(date).format('YYYY-MM-DD HH:mm'),
+      width: 100,
+      render: (date: string) => dayjs(date).format('MM-DD HH:mm'),
     },
     {
       title: '操作',
       key: 'action',
+      width: 200,
+      fixed: 'right' as const,
       render: (_: any, record: User) => (
-        <Space>
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => handleOpenModal(record)}
-          >
-            编辑
-          </Button>
-          <Button
-            type="link"
-            icon={<SafetyOutlined />}
-            onClick={() => handleOpenRoleModal(record)}
-          >
-            角色
-          </Button>
-          <Popconfirm
-            title="确定删除该用户吗？"
-            onConfirm={() => deleteMutation.mutate(record.id)}
-            okText="确定"
-            cancelText="取消"
-          >
-            <Button type="link" danger icon={<DeleteOutlined />}>
-              删除
-            </Button>
+        <Space size={0}>
+          <Button type="link" size="small" onClick={() => handleOpenModal(record)}>编辑</Button>
+          <Button type="link" size="small" onClick={() => handleOpenRoleModal(record)}>角色</Button>
+          <Button type="link" size="small" onClick={() => handleOpenRegionModal(record)}>区域</Button>
+          <Popconfirm title="确定删除该用户吗？" onConfirm={() => deleteMutation.mutate(record.id)} okText="确定" cancelText="取消">
+            <Button type="link" size="small" danger>删除</Button>
           </Popconfirm>
         </Space>
       ),
@@ -294,6 +339,7 @@ const UserList: React.FC = () => {
         dataSource={data?.items || []}
         rowKey="id"
         loading={isLoading}
+        scroll={{ x: 860 }}
         pagination={{
           total: data?.total || 0,
           showSizeChanger: true,
@@ -406,6 +452,46 @@ const UserList: React.FC = () => {
               ))}
             </Space>
           </Checkbox.Group>
+        </div>
+      </Modal>
+
+      {/* 区域分配弹窗 */}
+      <Modal
+        title={`分配区域 - ${regionAssignUser?.real_name || regionAssignUser?.username}`}
+        open={isRegionModalOpen}
+        onOk={handleAssignRegions}
+        onCancel={() => {
+          setIsRegionModalOpen(false);
+          setRegionAssignUser(null);
+          setSelectedRegionIds([]);
+        }}
+        confirmLoading={assignRegionsMutation.isPending}
+      >
+        <div style={{ marginTop: 16 }}>
+          <p style={{ marginBottom: 16, color: '#666' }}>
+            选择该员工负责的区域。启用区域权限后，员工只能操作负责区域内的客户。
+          </p>
+          <Checkbox.Group
+            value={selectedRegionIds}
+            onChange={(values) => setSelectedRegionIds(values as number[])}
+            style={{ width: '100%' }}
+          >
+            <Space direction="vertical" style={{ width: '100%' }}>
+              {regions?.map((region: Region) => (
+                <Checkbox key={region.id} value={region.id} style={{ marginLeft: 0 }}>
+                  <Space>
+                    <span style={{ fontWeight: 500 }}>{region.name}</span>
+                    <Tag>{region.code}</Tag>
+                  </Space>
+                </Checkbox>
+              ))}
+            </Space>
+          </Checkbox.Group>
+          {(!regions || regions.length === 0) && (
+            <p style={{ color: '#999', textAlign: 'center' }}>
+              暂无区域数据，请先在"区域管理"中创建区域
+            </p>
+          )}
         </div>
       </Modal>
     </Card>

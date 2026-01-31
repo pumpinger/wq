@@ -67,6 +67,7 @@ def list_tenants(
             expires_at=tenant.expires_at,
             contact_name=tenant.contact_name,
             contact_phone=tenant.contact_phone,
+            enable_region_scope=tenant.enable_region_scope or False,
             created_at=tenant.created_at,
             updated_at=tenant.updated_at,
             user_count=user_count
@@ -100,6 +101,7 @@ def get_tenant(
         expires_at=tenant.expires_at,
         contact_name=tenant.contact_name,
         contact_phone=tenant.contact_phone,
+        enable_region_scope=tenant.enable_region_scope or False,
         created_at=tenant.created_at,
         updated_at=tenant.updated_at,
         user_count=user_count
@@ -157,6 +159,7 @@ def create_tenant(
         expires_at=tenant.expires_at,
         contact_name=tenant.contact_name,
         contact_phone=tenant.contact_phone,
+        enable_region_scope=False,
         created_at=tenant.created_at,
         updated_at=tenant.updated_at,
         user_count=1
@@ -196,6 +199,7 @@ def update_tenant(
         expires_at=tenant.expires_at,
         contact_name=tenant.contact_name,
         contact_phone=tenant.contact_phone,
+        enable_region_scope=tenant.enable_region_scope or False,
         created_at=tenant.created_at,
         updated_at=tenant.updated_at,
         user_count=user_count

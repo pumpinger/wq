@@ -7,6 +7,7 @@ from .tenant import Tenant
 from .user import User
 from .role import Role, Permission, UserRole, user_roles
 from .customer_pool import CustomerPoolRecord
+from .region import Region, UserRegion
 
 __all__ = [
     "FieldDefinition",
@@ -20,5 +21,7 @@ __all__ = [
     "Permission",
     "UserRole",
     "user_roles",
-    "CustomerPoolRecord"
+    "CustomerPoolRecord",
+    "Region",
+    "UserRegion"
 ]

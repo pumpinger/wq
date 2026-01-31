@@ -12,10 +12,12 @@ import {
   message,
   Popconfirm,
   Card,
+  Switch,
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, LoginOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tenantApi } from '../../api';
+import { queryKeys } from '../../api/queryKeys';
 import { useAuth } from '../../contexts/AuthContext';
 import type { TenantInfo } from '../../contexts/AuthContext';
 import dayjs from 'dayjs';
@@ -29,6 +31,7 @@ interface Tenant {
   expires_at?: string;
   contact_name?: string;
   contact_phone?: string;
+  enable_region_scope?: boolean;
   user_count: number;
   created_at: string;
 }
@@ -53,7 +56,7 @@ const TenantList: React.FC = () => {
 
   // 获取租户列表
   const { data, isLoading } = useQuery({
-    queryKey: ['tenants'],
+    queryKey: queryKeys.tenants.list(),
     queryFn: async () => {
       const response = await tenantApi.list({ page: 1, page_size: 100 });
       return response.data;
@@ -65,7 +68,7 @@ const TenantList: React.FC = () => {
     mutationFn: (data: any) => tenantApi.create(data),
     onSuccess: () => {
       message.success('租户创建成功');
-      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tenants.all });
       setIsModalOpen(false);
       form.resetFields();
     },
@@ -79,7 +82,7 @@ const TenantList: React.FC = () => {
     mutationFn: ({ id, data }: { id: number; data: any }) => tenantApi.update(id, data),
     onSuccess: () => {
       message.success('租户更新成功');
-      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tenants.all });
       setIsModalOpen(false);
       setEditingTenant(null);
       form.resetFields();
@@ -94,7 +97,7 @@ const TenantList: React.FC = () => {
     mutationFn: (id: number) => tenantApi.delete(id),
     onSuccess: () => {
       message.success('租户删除成功');
-      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tenants.all });
     },
     onError: (error: any) => {
       message.error(error.response?.data?.detail || '删除失败');
@@ -107,6 +110,7 @@ const TenantList: React.FC = () => {
       form.setFieldsValue({
         ...tenant,
         expires_at: tenant.expires_at ? dayjs(tenant.expires_at) : undefined,
+        enable_region_scope: tenant.enable_region_scope || false,
       });
     } else {
       setEditingTenant(null);
@@ -140,16 +144,19 @@ const TenantList: React.FC = () => {
       title: '租户名称',
       dataIndex: 'name',
       key: 'name',
+      width: 120,
     },
     {
       title: '租户编码',
       dataIndex: 'code',
       key: 'code',
+      width: 100,
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
+      width: 80,
       render: (status: string) => {
         const colorMap: Record<string, string> = {
           active: 'green',
@@ -165,61 +172,50 @@ const TenantList: React.FC = () => {
       },
     },
     {
+      title: '区域权限',
+      dataIndex: 'enable_region_scope',
+      key: 'enable_region_scope',
+      width: 100,
+      render: (enabled: boolean) => enabled ? <Tag color="blue">已启用</Tag> : <Tag>未启用</Tag>,
+    },
+    {
       title: '用户数',
       key: 'user_count',
+      width: 100,
       render: (_: any, record: Tenant) => `${record.user_count} / ${record.max_users}`,
     },
     {
       title: '到期时间',
       dataIndex: 'expires_at',
       key: 'expires_at',
+      width: 120,
       render: (date: string) => date || '-',
     },
     {
       title: '联系人',
       dataIndex: 'contact_name',
       key: 'contact_name',
+      width: 100,
       render: (name: string) => name || '-',
     },
     {
       title: '创建时间',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (date: string) => dayjs(date).format('YYYY-MM-DD HH:mm'),
+      width: 100,
+      render: (date: string) => dayjs(date).format('MM-DD HH:mm'),
     },
     {
       title: '操作',
       key: 'action',
-      width: 280,
+      width: 200,
+      fixed: 'right' as const,
       render: (_: any, record: Tenant) => (
-        <Space>
-          <Button
-            type="primary"
-            size="small"
-            icon={<LoginOutlined />}
-            onClick={() => handleEnterTenant(record)}
-            disabled={record.status !== 'active'}
-          >
-            进入管理
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleOpenModal(record)}
-          >
-            编辑
-          </Button>
-          <Popconfirm
-            title="确定删除该租户吗？"
-            description="删除后将同时删除租户下的所有用户和数据"
-            onConfirm={() => deleteMutation.mutate(record.id)}
-            okText="确定"
-            cancelText="取消"
-          >
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-              删除
-            </Button>
+        <Space size={4}>
+          <Button type="primary" size="small" icon={<LoginOutlined />} onClick={() => handleEnterTenant(record)} disabled={record.status !== 'active'}>进入</Button>
+          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleOpenModal(record)}>编辑</Button>
+          <Popconfirm title="确定删除该租户吗？" description="删除后将同时删除租户下的所有用户和数据" onConfirm={() => deleteMutation.mutate(record.id)} okText="确定" cancelText="取消">
+            <Button type="link" size="small" danger icon={<DeleteOutlined />}>删除</Button>
           </Popconfirm>
         </Space>
       ),
@@ -237,6 +233,7 @@ const TenantList: React.FC = () => {
         dataSource={data?.items || []}
         rowKey="id"
         loading={isLoading}
+        scroll={{ x: 900 }}
         pagination={{
           total: data?.total || 0,
           showSizeChanger: true,
@@ -319,6 +316,16 @@ const TenantList: React.FC = () => {
                 <Input placeholder="请输入管理员姓名" />
               </Form.Item>
             </>
+          )}
+
+          {editingTenant && (
+            <Form.Item
+              name="enable_region_scope"
+              label="启用区域权限"
+              valuePropName="checked"
+            >
+              <Switch checkedChildren="启用" unCheckedChildren="关闭" />
+            </Form.Item>
           )}
 
           {editingTenant && (

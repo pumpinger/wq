@@ -42,6 +42,7 @@ class CustomerCreate(BaseModel):
     longitude: Optional[Decimal] = None
     managed_by: Optional[int] = None
     template_id: int
+    region_id: Optional[int] = None
     field_values: List[CustomerFieldValueCreate] = []
 
 
@@ -51,6 +52,7 @@ class CustomerUpdate(BaseModel):
     latitude: Optional[Decimal] = None
     longitude: Optional[Decimal] = None
     managed_by: Optional[int] = None
+    region_id: Optional[int] = None
     field_values: Optional[List[CustomerFieldValueCreate]] = None
 
 
@@ -62,6 +64,7 @@ class CustomerResponse(BaseModel):
     longitude: Optional[Decimal] = None
     managed_by: Optional[int] = None
     template_id: Optional[int] = None
+    region_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
 

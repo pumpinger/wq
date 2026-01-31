@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import dayjs from 'dayjs';
 import {
   Table,
   Button,
@@ -19,6 +20,7 @@ import {
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, MinusCircleOutlined } from '@ant-design/icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { templateApi, fieldApi } from '../api';
+import { queryKeys } from '../api/queryKeys';
 import type { CustomerTemplate, FieldDefinition, FieldType } from '../types';
 
 const fieldTypeLabels: Record<FieldType, string> = {
@@ -48,12 +50,12 @@ const TemplateList: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const { data: templates, isLoading } = useQuery({
-    queryKey: ['templates'],
+    queryKey: queryKeys.templates.list(),
     queryFn: () => templateApi.list().then((res) => res.data as CustomerTemplate[]),
   });
 
   const { data: fields } = useQuery({
-    queryKey: ['fields'],
+    queryKey: queryKeys.fields.list(),
     queryFn: () => fieldApi.list().then((res) => res.data as FieldDefinition[]),
   });
 
@@ -104,7 +106,7 @@ const TemplateList: React.FC = () => {
     try {
       await templateApi.delete(id);
       message.success('删除成功');
-      queryClient.invalidateQueries({ queryKey: ['templates'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.templates.all });
     } catch (error) {
       message.error('删除失败');
     }
@@ -195,7 +197,7 @@ const TemplateList: React.FC = () => {
       }
 
       setModalVisible(false);
-      queryClient.invalidateQueries({ queryKey: ['templates'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.templates.all });
     } catch (error: any) {
       message.error(error.response?.data?.detail || '操作失败');
     } finally {
@@ -205,8 +207,8 @@ const TemplateList: React.FC = () => {
 
   const columns = [
     { title: 'ID', dataIndex: 'id', key: 'id', width: 60 },
-    { title: '模板名称', dataIndex: 'name', key: 'name' },
-    { title: '描述', dataIndex: 'description', key: 'description', ellipsis: true },
+    { title: '模板名称', dataIndex: 'name', key: 'name', width: 150 },
+    { title: '描述', dataIndex: 'description', key: 'description', width: 200, ellipsis: true },
     {
       title: '默认模板',
       dataIndex: 'is_default',
@@ -218,24 +220,19 @@ const TemplateList: React.FC = () => {
       title: '创建时间',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (text: string) => new Date(text).toLocaleString(),
+      width: 100,
+      render: (text: string) => dayjs(text).format('MM-DD HH:mm'),
     },
     {
       title: '操作',
       key: 'action',
-      width: 240,
+      width: 160,
       render: (_: any, record: CustomerTemplate) => (
-        <Space>
-          <Button type="link" icon={<EyeOutlined />} onClick={() => handleView(record)}>
-            查看
-          </Button>
-          <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
-            编辑
-          </Button>
+        <Space size={0}>
+          <Button type="link" size="small" onClick={() => handleView(record)}>查看</Button>
+          <Button type="link" size="small" onClick={() => handleEdit(record)}>编辑</Button>
           <Popconfirm title="确认删除此模板?" onConfirm={() => handleDelete(record.id)}>
-            <Button type="link" danger icon={<DeleteOutlined />}>
-              删除
-            </Button>
+            <Button type="link" size="small" danger>删除</Button>
           </Popconfirm>
         </Space>
       ),
@@ -243,7 +240,7 @@ const TemplateList: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
+    <div>
       <div style={{ marginBottom: 16 }}>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
           添加模板
@@ -255,6 +252,7 @@ const TemplateList: React.FC = () => {
         dataSource={templates}
         rowKey="id"
         loading={isLoading}
+        scroll={{ x: 750 }}
         pagination={{ pageSize: 10 }}
       />
 

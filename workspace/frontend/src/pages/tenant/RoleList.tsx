@@ -20,6 +20,7 @@ import {
 import { PlusOutlined, EditOutlined, DeleteOutlined, LockOutlined, EyeOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { roleApi } from '../../api';
+import { queryKeys } from '../../api/queryKeys';
 
 interface Permission {
   id: number;
@@ -67,7 +68,7 @@ const RoleList: React.FC = () => {
 
   // 获取角色列表
   const { data: roles, isLoading } = useQuery({
-    queryKey: ['roles'],
+    queryKey: queryKeys.roles.list(),
     queryFn: async () => {
       const response = await roleApi.list();
       return response.data as Role[];
@@ -76,7 +77,7 @@ const RoleList: React.FC = () => {
 
   // 获取权限列表
   const { data: permissions } = useQuery({
-    queryKey: ['permissions'],
+    queryKey: queryKeys.roles.permissions(),
     queryFn: async () => {
       const response = await roleApi.getPermissions();
       return response.data as Permission[];
@@ -88,7 +89,7 @@ const RoleList: React.FC = () => {
     mutationFn: (data: any) => roleApi.create(data),
     onSuccess: () => {
       message.success('角色创建成功');
-      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.roles.all });
       handleCloseModal();
     },
     onError: (error: any) => {
@@ -101,7 +102,7 @@ const RoleList: React.FC = () => {
     mutationFn: ({ id, data }: { id: number; data: any }) => roleApi.update(id, data),
     onSuccess: () => {
       message.success('角色更新成功');
-      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.roles.all });
       handleCloseModal();
     },
     onError: (error: any) => {
@@ -114,7 +115,7 @@ const RoleList: React.FC = () => {
     mutationFn: (id: number) => roleApi.delete(id),
     onSuccess: () => {
       message.success('角色删除成功');
-      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.roles.all });
     },
     onError: (error: any) => {
       message.error(error.response?.data?.detail || '删除失败');
@@ -224,6 +225,7 @@ const RoleList: React.FC = () => {
       title: '角色名称',
       dataIndex: 'name',
       key: 'name',
+      width: 160,
       render: (name: string, record: Role) => (
         <Space>
           {name}
@@ -235,11 +237,13 @@ const RoleList: React.FC = () => {
       title: '角色编码',
       dataIndex: 'code',
       key: 'code',
+      width: 130,
     },
     {
       title: '权限数量',
       dataIndex: 'permissions',
       key: 'permissions',
+      width: 100,
       render: (perms: PermissionWithScope[]) => perms?.length || 0,
     },
     {
@@ -304,6 +308,7 @@ const RoleList: React.FC = () => {
         dataSource={roles || []}
         rowKey="id"
         loading={isLoading}
+        scroll={{ x: 800 }}
         pagination={false}
       />
 

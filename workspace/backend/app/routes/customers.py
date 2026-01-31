@@ -11,6 +11,8 @@ from openpyxl import Workbook
 from ..database import get_db
 from ..models import Customer, CustomerFieldValue, CustomerTemplate, TemplateField, FieldDefinition
 from ..models.user import User
+from ..models.tenant import Tenant
+from ..models.region import UserRegion
 from ..schemas import CustomerCreate, CustomerUpdate, CustomerResponse, CustomerDetail
 from ..schemas.customer import CustomFieldFilter, CustomFieldFilterOperator
 from ..core.deps import get_current_active_user, get_effective_tenant_id, require_tenant_context
@@ -22,6 +24,12 @@ def get_subordinate_ids(db: Session, user_id: int) -> List[int]:
     """获取直属下属的用户ID列表"""
     subordinates = db.query(User).filter(User.manager_id == user_id).all()
     return [u.id for u in subordinates]
+
+
+def get_user_region_ids(db: Session, user_id: int) -> list[int]:
+    """获取用户负责的区域ID列表"""
+    user_regions = db.query(UserRegion).filter(UserRegion.user_id == user_id).all()
+    return [ur.region_id for ur in user_regions]
 
 
 def get_customer_query(db: Session, current_user: User, tenant_id: Optional[int] = None):
@@ -38,7 +46,7 @@ def get_customer_query(db: Session, current_user: User, tenant_id: Optional[int]
         # 超管未选择租户时，返回所有
         return query
 
-    # 超管或租户管理员可以看全部
+    # 超管或租户管理员可以看全部（不受区域限制）
     if current_user.is_super_admin or current_user.role == 'tenant_admin':
         return query
 
@@ -56,6 +64,17 @@ def get_customer_query(db: Session, current_user: User, tenant_id: Optional[int]
     else:  # self
         # 只看自己负责的客户
         query = query.filter(Customer.managed_by == current_user.id)
+
+    # 区域权限过滤
+    if effective_tenant_id:
+        tenant_obj = db.query(Tenant).filter(Tenant.id == effective_tenant_id).first()
+        if tenant_obj and tenant_obj.enable_region_scope:
+            user_region_ids = get_user_region_ids(db, current_user.id)
+            if user_region_ids:
+                query = query.filter(Customer.region_id.in_(user_region_ids))
+            else:
+                # 未分配区域的员工只能看到未分配区域的客户
+                query = query.filter(Customer.region_id.is_(None))
 
     return query
 
@@ -179,6 +198,57 @@ def apply_custom_filters(query, custom_filters: List[CustomFieldFilter], db: Ses
     return query
 
 
+def apply_standard_filters(
+    query,
+    db: Session,
+    template_id: Optional[int] = None,
+    keyword: Optional[str] = None,
+    managed_by: Optional[int] = None,
+    has_coords: Optional[bool] = None,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    custom_filters: Optional[str] = None,
+):
+    """应用标准筛选条件（列表和导出共用）"""
+    if template_id:
+        query = query.filter(Customer.template_id == template_id)
+
+    if keyword:
+        query = query.filter(
+            or_(
+                Customer.name.contains(keyword),
+                Customer.address.contains(keyword)
+            )
+        )
+
+    if managed_by is not None:
+        if managed_by == 0:
+            query = query.filter(Customer.managed_by.is_(None))
+        else:
+            query = query.filter(Customer.managed_by == managed_by)
+
+    if has_coords is not None:
+        if has_coords:
+            query = query.filter(Customer.latitude.isnot(None), Customer.longitude.isnot(None))
+        else:
+            query = query.filter(or_(Customer.latitude.is_(None), Customer.longitude.is_(None)))
+
+    if start_date:
+        query = query.filter(Customer.created_at >= datetime.combine(start_date, datetime.min.time()))
+    if end_date:
+        query = query.filter(Customer.created_at <= datetime.combine(end_date, datetime.max.time()))
+
+    if custom_filters:
+        try:
+            filters_data = json.loads(custom_filters)
+            filters_list = [CustomFieldFilter(**f) for f in filters_data]
+            query = apply_custom_filters(query, filters_list, db)
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    return query
+
+
 @router.get("/", response_model=List[CustomerResponse])
 def list_customers(
     request: Request,
@@ -197,49 +267,12 @@ def list_customers(
     """获取客户列表（支持多维度筛选）"""
     tenant_id = get_effective_tenant_id(request, current_user)
     query = get_customer_query(db, current_user, tenant_id)
-
-    # 按模板筛选
-    if template_id:
-        query = query.filter(Customer.template_id == template_id)
-
-    # 按关键词筛选（名称或地址）
-    if keyword:
-        query = query.filter(
-            or_(
-                Customer.name.contains(keyword),
-                Customer.address.contains(keyword)
-            )
-        )
-
-    # 按负责人筛选
-    if managed_by is not None:
-        if managed_by == 0:
-            # 0 表示公海客户（无负责人）
-            query = query.filter(Customer.managed_by.is_(None))
-        else:
-            query = query.filter(Customer.managed_by == managed_by)
-
-    # 按是否有坐标筛选
-    if has_coords is not None:
-        if has_coords:
-            query = query.filter(Customer.latitude.isnot(None), Customer.longitude.isnot(None))
-        else:
-            query = query.filter(or_(Customer.latitude.is_(None), Customer.longitude.is_(None)))
-
-    # 按创建时间范围筛选
-    if start_date:
-        query = query.filter(Customer.created_at >= datetime.combine(start_date, datetime.min.time()))
-    if end_date:
-        query = query.filter(Customer.created_at <= datetime.combine(end_date, datetime.max.time()))
-
-    # 自定义字段筛选
-    if custom_filters:
-        try:
-            filters_data = json.loads(custom_filters)
-            filters_list = [CustomFieldFilter(**f) for f in filters_data]
-            query = apply_custom_filters(query, filters_list, db)
-        except (json.JSONDecodeError, ValueError):
-            pass  # 忽略无效的筛选条件
+    query = apply_standard_filters(
+        query, db,
+        template_id=template_id, keyword=keyword, managed_by=managed_by,
+        has_coords=has_coords, start_date=start_date, end_date=end_date,
+        custom_filters=custom_filters,
+    )
 
     return query.order_by(Customer.created_at.desc()).offset(skip).limit(limit).all()
 
@@ -261,44 +294,12 @@ def export_customers(
     """导出客户为 Excel"""
     tenant_id = get_effective_tenant_id(request, current_user)
     query = get_customer_query(db, current_user, tenant_id)
-
-    # 应用筛选条件
-    if template_id:
-        query = query.filter(Customer.template_id == template_id)
-
-    if keyword:
-        query = query.filter(
-            or_(
-                Customer.name.contains(keyword),
-                Customer.address.contains(keyword)
-            )
-        )
-
-    if managed_by is not None:
-        if managed_by == 0:
-            query = query.filter(Customer.managed_by.is_(None))
-        else:
-            query = query.filter(Customer.managed_by == managed_by)
-
-    if has_coords is not None:
-        if has_coords:
-            query = query.filter(Customer.latitude.isnot(None), Customer.longitude.isnot(None))
-        else:
-            query = query.filter(or_(Customer.latitude.is_(None), Customer.longitude.is_(None)))
-
-    if start_date:
-        query = query.filter(Customer.created_at >= datetime.combine(start_date, datetime.min.time()))
-    if end_date:
-        query = query.filter(Customer.created_at <= datetime.combine(end_date, datetime.max.time()))
-
-    # 自定义字段筛选
-    if custom_filters:
-        try:
-            filters_data = json.loads(custom_filters)
-            filters_list = [CustomFieldFilter(**f) for f in filters_data]
-            query = apply_custom_filters(query, filters_list, db)
-        except (json.JSONDecodeError, ValueError):
-            pass  # 忽略无效的筛选条件
+    query = apply_standard_filters(
+        query, db,
+        template_id=template_id, keyword=keyword, managed_by=managed_by,
+        has_coords=has_coords, start_date=start_date, end_date=end_date,
+        custom_filters=custom_filters,
+    )
 
     customers = query.options(joinedload(Customer.field_values)).order_by(Customer.created_at.desc()).all()
 
@@ -411,7 +412,8 @@ def create_customer(
         longitude=data.longitude,
         managed_by=managed_by,
         template_id=data.template_id,
-        tenant_id=tenant_id
+        tenant_id=tenant_id,
+        region_id=data.region_id
     )
     db.add(customer)
     db.flush()
@@ -484,6 +486,8 @@ def update_customer(
         # 只有管理员可以修改负责人
         if current_user.role in ['admin', 'tenant_admin'] or current_user.is_super_admin:
             customer.managed_by = data.managed_by
+    if data.region_id is not None:
+        customer.region_id = data.region_id
 
     # 更新字段值
     if data.field_values is not None:

@@ -9,6 +9,8 @@ from typing import List, Optional
 from ..database import get_db
 from ..models import Customer, CustomerPoolRecord, CustomerTemplate
 from ..models.user import User
+from ..models.tenant import Tenant
+from ..models.region import UserRegion
 from ..schemas import (
     ReleaseCustomerRequest, ClaimCustomerRequest,
     PoolCustomerResponse, CustomerPoolRecordResponse
@@ -45,6 +47,16 @@ def list_pool_customers(
 
     if keyword:
         query = query.filter(Customer.name.contains(keyword))
+
+    # 区域权限过滤
+    if tenant_id and not (current_user.is_super_admin or current_user.role == 'tenant_admin'):
+        tenant_obj = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+        if tenant_obj and tenant_obj.enable_region_scope:
+            user_region_ids = [ur.region_id for ur in db.query(UserRegion).filter(UserRegion.user_id == current_user.id).all()]
+            if user_region_ids:
+                query = query.filter(Customer.region_id.in_(user_region_ids))
+            else:
+                query = query.filter(Customer.region_id.is_(None))
 
     customers = query.order_by(desc(Customer.updated_at)).offset(skip).limit(limit).all()
 

@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { Table, Button, Space, Modal, message, Tag, Descriptions, Input, Select, Popconfirm } from 'antd';
 import { UserAddOutlined, EyeOutlined, HistoryOutlined, SearchOutlined } from '@ant-design/icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import dayjs from 'dayjs';
 import { customerPoolApi, templateApi } from '../api';
+import { queryKeys } from '../api/queryKeys';
 import type { CustomerTemplate } from '../types';
 
 interface PoolCustomer {
@@ -39,7 +41,7 @@ const CustomerPool: React.FC = () => {
 
   // 获取公海客户列表
   const { data: poolCustomers, isLoading } = useQuery({
-    queryKey: ['pool-customers', keyword, templateFilter],
+    queryKey: queryKeys.pool.list({ keyword, templateFilter }),
     queryFn: () => customerPoolApi.list({
       keyword: keyword || undefined,
       template_id: templateFilter,
@@ -48,7 +50,7 @@ const CustomerPool: React.FC = () => {
 
   // 获取模板列表
   const { data: templates } = useQuery({
-    queryKey: ['templates'],
+    queryKey: queryKeys.templates.list(),
     queryFn: () => templateApi.list().then((res) => res.data as CustomerTemplate[]),
   });
 
@@ -57,8 +59,8 @@ const CustomerPool: React.FC = () => {
     try {
       await customerPoolApi.claim(customer.id);
       message.success(`成功认领客户: ${customer.name}`);
-      queryClient.invalidateQueries({ queryKey: ['pool-customers'] });
-      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.pool.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
     } catch (error: any) {
       message.error(error.response?.data?.detail || '认领失败');
     }
@@ -106,6 +108,8 @@ const CustomerPool: React.FC = () => {
       title: '客户名称',
       dataIndex: 'name',
       key: 'name',
+      width: 140,
+      ellipsis: true,
     },
     {
       title: '地址',
@@ -117,27 +121,30 @@ const CustomerPool: React.FC = () => {
       title: '模板',
       dataIndex: 'template_name',
       key: 'template_name',
+      width: 100,
       render: (name: string) => name ? <Tag color="blue">{name}</Tag> : '-',
     },
     {
-      title: '进入公海时间',
+      title: '公海时间',
       dataIndex: 'pool_time',
       key: 'pool_time',
-      render: (text: string) => text ? new Date(text).toLocaleString() : '-',
+      width: 100,
+      render: (text: string) => text ? dayjs(text).format('MM-DD HH:mm') : '-',
     },
     {
       title: '原因',
       dataIndex: 'pool_reason',
       key: 'pool_reason',
+      width: 120,
       ellipsis: true,
       render: (text: string) => text || '-',
     },
     {
       title: '操作',
       key: 'action',
-      width: 240,
+      width: 200,
       render: (_: any, record: PoolCustomer) => (
-        <Space>
+        <Space size={4}>
           <Button
             type="link"
             icon={<EyeOutlined />}
@@ -201,7 +208,7 @@ const CustomerPool: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
+    <div>
       <div style={{ marginBottom: 16, display: 'flex', gap: 16 }}>
         <Input
           placeholder="搜索客户名称"
@@ -233,6 +240,7 @@ const CustomerPool: React.FC = () => {
         dataSource={poolCustomers}
         rowKey="id"
         loading={isLoading}
+        scroll={{ x: 800 }}
         pagination={{ pageSize: 10 }}
       />
 

@@ -148,6 +148,19 @@ export const roleApi = {
     api.put(`/roles/user/${userId}/roles`, roleIds),
 };
 
+// 区域管理
+export const regionApi = {
+  list: () => api.get('/regions'),
+  get: (id: number) => api.get(`/regions/${id}`),
+  create: (data: any) => api.post('/regions', data),
+  update: (id: number, data: any) => api.put(`/regions/${id}`, data),
+  delete: (id: number) => api.delete(`/regions/${id}`),
+  // 用户区域分配
+  getUserRegions: (userId: number) => api.get(`/users/${userId}/regions`),
+  assignUserRegions: (userId: number, regionIds: number[]) =>
+    api.put(`/users/${userId}/regions`, { region_ids: regionIds }),
+};
+
 // 客户公海
 export const customerPoolApi = {
   // 获取公海客户列表

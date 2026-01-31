@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, JSON, UniqueConstraint
+from sqlalchemy import Column, Integer, ForeignKey, JSON, UniqueConstraint, Index
 from sqlalchemy.orm import relationship
 
 from ..database import Base
@@ -14,6 +14,7 @@ class CustomerFieldValue(Base):
 
     __table_args__ = (
         UniqueConstraint("customer_id", "field_id", name="uk_customer_field"),
+        Index("idx_cfv_field_id", "field_id"),
     )
 
     # 关联

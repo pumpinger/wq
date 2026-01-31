@@ -31,12 +31,14 @@ class TenantUpdate(BaseModel):
     status: Optional[str] = None
     contact_name: Optional[str] = None
     contact_phone: Optional[str] = None
+    enable_region_scope: Optional[bool] = None
 
 
 class TenantResponse(TenantBase):
     """租户响应"""
     id: int
     status: str
+    enable_region_scope: bool = False
     created_at: datetime
     updated_at: datetime
     user_count: int = 0

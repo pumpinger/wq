@@ -44,9 +44,21 @@ export interface Customer {
   longitude?: number;
   managed_by?: number;
   template_id?: number;
+  region_id?: number;
   created_at: string;
   updated_at: string;
   field_values?: CustomerFieldValue[];
+}
+
+export interface Region {
+  id: number;
+  name: string;
+  code: string;
+  tenant_id: number;
+  parent_id?: number;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
 }
 
 // 自定义字段筛选操作符

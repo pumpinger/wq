@@ -6,6 +6,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { customerApi, templateApi, fieldApi } from '../api';
+import { queryKeys } from '../api/queryKeys';
 import type { Customer, CustomerTemplate, FieldDefinition } from '../types';
 
 // 修复 Leaflet 默认图标问题
@@ -48,19 +49,19 @@ const CustomerMap: React.FC = () => {
 
   // 获取客户列表（只获取有坐标的）
   const { data: customers, isLoading: customersLoading, refetch } = useQuery({
-    queryKey: ['customers', { has_coords: true }],
+    queryKey: queryKeys.customers.list({ has_coords: true }),
     queryFn: () => customerApi.list({ has_coords: true, limit: 100 }).then((res) => res.data as Customer[]),
   });
 
   // 获取模板列表
   const { data: templates } = useQuery({
-    queryKey: ['templates'],
+    queryKey: queryKeys.templates.list(),
     queryFn: () => templateApi.list().then((res) => res.data as CustomerTemplate[]),
   });
 
   // 获取字段定义列表
   const { data: fields } = useQuery({
-    queryKey: ['fields'],
+    queryKey: queryKeys.fields.list(),
     queryFn: () => fieldApi.list().then((res) => res.data as FieldDefinition[]),
   });
 

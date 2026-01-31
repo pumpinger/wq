@@ -9,16 +9,26 @@ from sqlalchemy import func
 from ..database import get_db
 from ..models.user import User
 from ..models.tenant import Tenant
+from ..models.region import Region, UserRegion
 from ..schemas.user import (
     UserCreate,
     UserUpdate,
     UserResponse,
     UserListResponse
 )
+from ..schemas.region import UserRegionAssign
 from ..core.security import get_password_hash
 from ..core.deps import get_current_active_user, require_tenant_admin, get_effective_tenant_id, require_tenant_context
 
 router = APIRouter(prefix="/users", tags=["用户管理"])
+
+
+def _build_user_response(user: User, db: Session) -> UserResponse:
+    """构建包含 region_ids 的用户响应"""
+    region_ids = [ur.region_id for ur in db.query(UserRegion).filter(UserRegion.user_id == user.id).all()]
+    resp = UserResponse.model_validate(user)
+    resp.region_ids = region_ids
+    return resp
 
 
 @router.get("", response_model=UserListResponse)
@@ -64,7 +74,7 @@ def list_users(
         (page - 1) * page_size
     ).limit(page_size).all()
 
-    items = [UserResponse.model_validate(u) for u in users]
+    items = [_build_user_response(u, db) for u in users]
 
     return UserListResponse(items=items, total=total)
 
@@ -86,7 +96,7 @@ def get_user(
     if tenant_id and user.tenant_id != tenant_id:
         raise HTTPException(status_code=403, detail="无权限查看该用户")
 
-    return UserResponse.model_validate(user)
+    return _build_user_response(user, db)
 
 
 @router.post("", response_model=UserResponse)
@@ -132,7 +142,7 @@ def create_user(
     db.commit()
     db.refresh(user)
 
-    return UserResponse.model_validate(user)
+    return _build_user_response(user, db)
 
 
 @router.put("/{user_id}", response_model=UserResponse)
@@ -172,7 +182,7 @@ def update_user(
     db.commit()
     db.refresh(user)
 
-    return UserResponse.model_validate(user)
+    return _build_user_response(user, db)
 
 
 @router.delete("/{user_id}")
@@ -204,3 +214,63 @@ def delete_user(
     db.commit()
 
     return {"message": "用户删除成功"}
+
+
+@router.get("/{user_id}/regions")
+def get_user_regions(
+    user_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_tenant_admin)
+):
+    """获取用户的区域列表"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    tenant_id = get_effective_tenant_id(request, current_user)
+    if tenant_id and user.tenant_id != tenant_id:
+        raise HTTPException(status_code=403, detail="无权限查看该用户")
+
+    user_regions = db.query(UserRegion).filter(UserRegion.user_id == user_id).all()
+    region_ids = [ur.region_id for ur in user_regions]
+
+    return {"region_ids": region_ids}
+
+
+@router.put("/{user_id}/regions")
+def assign_user_regions(
+    user_id: int,
+    request: Request,
+    data: UserRegionAssign,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_tenant_admin)
+):
+    """分配区域给用户"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    tenant_id = get_effective_tenant_id(request, current_user)
+    if tenant_id and user.tenant_id != tenant_id:
+        raise HTTPException(status_code=403, detail="无权限修改该用户")
+
+    # 验证区域都属于同一租户
+    if data.region_ids:
+        regions = db.query(Region).filter(
+            Region.id.in_(data.region_ids),
+            Region.tenant_id == (tenant_id or user.tenant_id)
+        ).all()
+        if len(regions) != len(data.region_ids):
+            raise HTTPException(status_code=400, detail="部分区域不存在或不属于当前租户")
+
+    # 清除旧的关联
+    db.query(UserRegion).filter(UserRegion.user_id == user_id).delete()
+
+    # 建立新的关联
+    for region_id in data.region_ids:
+        db.add(UserRegion(user_id=user_id, region_id=region_id))
+
+    db.commit()
+
+    return {"message": "区域分配成功", "region_ids": data.region_ids}

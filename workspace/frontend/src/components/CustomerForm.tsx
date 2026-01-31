@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Form, Input, Select, Button, message, Spin, InputNumber, Row, Col } from 'antd';
 import { useQuery } from '@tanstack/react-query';
-import { templateApi, customerApi } from '../api';
-import type { CustomerTemplate, Customer } from '../types';
+import { templateApi, customerApi, regionApi } from '../api';
+import { queryKeys } from '../api/queryKeys';
+import type { CustomerTemplate, Customer, Region } from '../types';
 import DynamicField from './DynamicField';
 import LocationPicker from './LocationPicker';
 
@@ -21,13 +22,19 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSuccess, onCanc
 
   // 获取模板列表
   const { data: templates } = useQuery({
-    queryKey: ['templates'],
+    queryKey: queryKeys.templates.list(),
     queryFn: () => templateApi.list().then((res) => res.data as CustomerTemplate[]),
+  });
+
+  // 获取区域列表
+  const { data: regions } = useQuery({
+    queryKey: queryKeys.regions.list(),
+    queryFn: () => regionApi.list().then((res) => (res.data?.items || []) as Region[]),
   });
 
   // 获取选中模板的详情
   const { data: templateDetail, isLoading: templateLoading } = useQuery({
-    queryKey: ['template', selectedTemplateId],
+    queryKey: queryKeys.templates.detail(selectedTemplateId!),
     queryFn: () =>
       selectedTemplateId
         ? templateApi.get(selectedTemplateId).then((res) => res.data as CustomerTemplate)
@@ -52,6 +59,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSuccess, onCanc
         latitude: customer.latitude,
         longitude: customer.longitude,
         template_id: customer.template_id,
+        region_id: customer.region_id,
         field_values: fieldValues,
       });
     }
@@ -86,6 +94,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSuccess, onCanc
         latitude: values.latitude,
         longitude: values.longitude,
         template_id: values.template_id,
+        region_id: values.region_id || null,
         field_values: fieldValues,
       };
 
@@ -159,6 +168,16 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSuccess, onCanc
             />
           </Col>
         </Row>
+      </Form.Item>
+
+      <Form.Item label="所属区域" name="region_id">
+        <Select allowClear placeholder="请选择所属区域（可选）">
+          {(regions || []).map((r) => (
+            <Select.Option key={r.id} value={r.id}>
+              {r.name}
+            </Select.Option>
+          ))}
+        </Select>
       </Form.Item>
 
       <Form.Item

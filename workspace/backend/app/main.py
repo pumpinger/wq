@@ -10,7 +10,8 @@ from .routes import (
     tenants_router,
     users_router,
     roles_router,
-    customer_pool_router
+    customer_pool_router,
+    regions_router
 )
 
 # 创建数据库表
@@ -40,6 +41,7 @@ app.include_router(customer_templates_router, prefix="/api")
 app.include_router(customers_router, prefix="/api")
 app.include_router(roles_router, prefix="/api")
 app.include_router(customer_pool_router, prefix="/api")
+app.include_router(regions_router, prefix="/api")
 
 
 @app.get("/")

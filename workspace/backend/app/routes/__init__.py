@@ -6,6 +6,7 @@ from .tenants import router as tenants_router
 from .users import router as users_router
 from .roles import router as roles_router
 from .customer_pool import router as customer_pool_router
+from .regions import router as regions_router
 
 __all__ = [
     "field_definitions_router",
@@ -15,5 +16,6 @@ __all__ = [
     "tenants_router",
     "users_router",
     "roles_router",
-    "customer_pool_router"
+    "customer_pool_router",
+    "regions_router"
 ]
