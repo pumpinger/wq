@@ -1,16 +1,18 @@
-import React from 'react';
-import { NavBar, Card, List, Tag, Button, Dialog, Toast, Space, Empty } from 'antd-mobile';
+import React, { useState } from 'react';
+import { NavBar, Card, List, Tag, Button, Dialog, Toast, Space, Empty, Picker } from 'antd-mobile';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { customerApi, templateApi, poolApi } from '../../api';
+import { customerApi, templateApi, poolApi, visitApi } from '../../api';
 import { queryKeys } from '../../api/queryKeys';
-import type { Customer, CustomerTemplate } from '../../types';
+import { visitKeys } from '../../api/queryKeys';
+import type { Customer, CustomerTemplate, VisitTaskType } from '../../types';
 import dayjs from 'dayjs';
 
 const CustomerDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [showTaskTypePicker, setShowTaskTypePicker] = useState(false);
 
   const { data: customer, isLoading } = useQuery({
     queryKey: queryKeys.customers.detail(Number(id)),
@@ -32,6 +34,35 @@ const CustomerDetail: React.FC = () => {
       navigate(-1);
     },
   });
+
+  const { data: taskTypes = [] } = useQuery({
+    queryKey: visitKeys.taskTypes,
+    queryFn: () => visitApi.getTaskTypes().then((r) => (r.data?.items || r.data || []) as VisitTaskType[]),
+  });
+
+  const createTaskMutation = useMutation({
+    mutationFn: (data: any) => visitApi.createTask(data),
+    onSuccess: (res) => {
+      const taskId = res.data?.id;
+      if (taskId) {
+        navigate(`/visit/execute/${taskId}`);
+      } else {
+        Toast.show({ icon: 'success', content: '任务已创建' });
+        navigate('/visits');
+      }
+    },
+    onError: (err: any) => {
+      Toast.show({ icon: 'fail', content: err.response?.data?.detail || '创建任务失败' });
+    },
+  });
+
+  const handleCreateVisit = (taskTypeId: number) => {
+    createTaskMutation.mutate({
+      customer_id: Number(id),
+      task_type_id: taskTypeId,
+      planned_date: dayjs().format('YYYY-MM-DD'),
+    });
+  };
 
   const releaseMutation = useMutation({
     mutationFn: (reason?: string) => poolApi.release(Number(id), reason),
@@ -114,10 +145,32 @@ const CustomerDetail: React.FC = () => {
         className="safe-area-bottom"
       >
         <Space style={{ width: '100%' }} justify="evenly">
+          <Button color="success" onClick={() => {
+            if (taskTypes.length === 0) {
+              Toast.show({ content: '暂无可用的拜访类型' });
+              return;
+            }
+            if (taskTypes.length === 1) {
+              handleCreateVisit(taskTypes[0].id);
+              return;
+            }
+            setShowTaskTypePicker(true);
+          }} loading={createTaskMutation.isPending}>发起拜访</Button>
           <Button color="primary" onClick={() => navigate(`/customer/${id}/edit`)}>编辑</Button>
           <Button color="warning" fill="outline" onClick={handleRelease}>释放公海</Button>
           <Button color="danger" fill="outline" onClick={handleDelete}>删除</Button>
         </Space>
+        <Picker
+          columns={[taskTypes.filter(t => t.is_active).map((t) => ({ label: t.name, value: t.id }))]}
+          visible={showTaskTypePicker}
+          onClose={() => setShowTaskTypePicker(false)}
+          onConfirm={(val) => {
+            if (val[0] !== undefined && val[0] !== null) {
+              handleCreateVisit(Number(val[0]));
+            }
+            setShowTaskTypePicker(false);
+          }}
+        />
       </div>
     </div>
   );

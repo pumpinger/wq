@@ -175,4 +175,45 @@ export const customerPoolApi = {
   history: (customerId: number) => api.get(`/customers/pool/${customerId}/history`),
 };
 
+// 拜访任务类型
+export const visitTaskTypeApi = {
+  list: (params?: { active_only?: boolean }) => api.get('/visit-task-types/', { params }),
+  get: (id: number) => api.get(`/visit-task-types/${id}`),
+  create: (data: any) => api.post('/visit-task-types/', data),
+  update: (id: number, data: any) => api.put(`/visit-task-types/${id}`, data),
+  delete: (id: number) => api.delete(`/visit-task-types/${id}`),
+};
+
+// 拜访计划
+export const visitPlanApi = {
+  list: (params?: { date_from?: string; date_to?: string; assigned_to?: number; status?: string; skip?: number; limit?: number }) =>
+    api.get('/visit-plans/', { params }),
+  get: (id: number) => api.get(`/visit-plans/${id}`),
+  create: (data: any) => api.post('/visit-plans/', data),
+  update: (id: number, data: any) => api.put(`/visit-plans/${id}`, data),
+  delete: (id: number) => api.delete(`/visit-plans/${id}`),
+  publish: (id: number) => api.post(`/visit-plans/${id}/publish`),
+  cancel: (id: number) => api.post(`/visit-plans/${id}/cancel`),
+};
+
+// 拜访任务
+export const visitTaskApi = {
+  list: (params?: { planned_date?: string; date_from?: string; date_to?: string; assigned_to?: number; customer_id?: number; task_type_id?: number; status?: string; skip?: number; limit?: number }) =>
+    api.get('/visit-tasks/', { params }),
+  get: (id: number) => api.get(`/visit-tasks/${id}`),
+  create: (data: any) => api.post('/visit-tasks/', data),
+  cancel: (id: number) => api.post(`/visit-tasks/${id}/cancel`),
+};
+
+// 拜访记录
+export const visitRecordApi = {
+  list: (params?: { date_from?: string; date_to?: string; user_id?: number; customer_id?: number; task_type_id?: number; status?: string; skip?: number; limit?: number }) =>
+    api.get('/visit-records/', { params }),
+  get: (id: number) => api.get(`/visit-records/${id}`),
+  statsSummary: (params?: { date_from?: string; date_to?: string }) =>
+    api.get('/visit-records/stats/summary', { params }),
+  statsByUser: (params?: { date_from?: string; date_to?: string }) =>
+    api.get('/visit-records/stats/by-user', { params }),
+};
+
 export default api;

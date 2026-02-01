@@ -56,4 +56,33 @@ export const queryKeys = {
     all: ['tenants'] as const,
     list: () => ['tenants', 'list'] as const,
   },
+
+  // 拜访任务类型
+  visitTaskTypes: {
+    all: ['visitTaskTypes'] as const,
+    list: (filters?: Record<string, any>) => ['visitTaskTypes', 'list', filters] as const,
+    detail: (id: number) => ['visitTaskTypes', 'detail', id] as const,
+  },
+
+  // 拜访计划
+  visitPlans: {
+    all: ['visitPlans'] as const,
+    list: (filters?: Record<string, any>) => ['visitPlans', 'list', filters] as const,
+    detail: (id: number) => ['visitPlans', 'detail', id] as const,
+  },
+
+  // 拜访任务
+  visitTasks: {
+    all: ['visitTasks'] as const,
+    list: (filters?: Record<string, any>) => ['visitTasks', 'list', filters] as const,
+    detail: (id: number) => ['visitTasks', 'detail', id] as const,
+  },
+
+  // 拜访记录
+  visitRecords: {
+    all: ['visitRecords'] as const,
+    list: (filters?: Record<string, any>) => ['visitRecords', 'list', filters] as const,
+    detail: (id: number) => ['visitRecords', 'detail', id] as const,
+    statsSummary: (filters?: Record<string, any>) => ['visitRecords', 'statsSummary', filters] as const,
+  },
 };

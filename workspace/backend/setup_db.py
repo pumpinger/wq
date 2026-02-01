@@ -233,6 +233,90 @@ def init_fields_and_template(db):
     print(f"  模板: 已创建默认模板，包含 {len(fields)} 个字段")
 
 
+def init_visit_task_types(db):
+    """初始化预设拜访任务类型"""
+    from app.models.visit_task_type import VisitTaskType, VisitTaskTypeField
+
+    print("[5/6] 初始化拜访任务类型...")
+
+    preset_types = [
+        {
+            "name": "巡店", "code": "patrol", "icon": "EyeOutline", "color": "#1677ff",
+            "description": "日常巡店检查",
+            "fields": [
+                {"name": "店铺整洁度", "field_key": "cleanliness", "field_type": "rating", "is_required": True, "sort_order": 0},
+                {"name": "店员在岗情况", "field_key": "staff_status", "field_type": "select",
+                 "options": {"choices": ["全员在岗", "部分缺岗", "无人在岗"]}, "is_required": True, "sort_order": 1},
+                {"name": "巡店备注", "field_key": "patrol_remark", "field_type": "text", "sort_order": 2},
+                {"name": "现场照片", "field_key": "patrol_photos", "field_type": "photo", "sort_order": 3},
+            ]
+        },
+        {
+            "name": "陈列检查", "code": "display_check", "icon": "PictureOutline", "color": "#52c41a",
+            "description": "产品陈列标准检查",
+            "fields": [
+                {"name": "陈列合规", "field_key": "display_compliant", "field_type": "boolean", "is_required": True, "sort_order": 0},
+                {"name": "陈列评分", "field_key": "display_score", "field_type": "rating", "is_required": True, "sort_order": 1},
+                {"name": "竞品陈列情况", "field_key": "competitor_display", "field_type": "select",
+                 "options": {"choices": ["无竞品", "少量竞品", "大量竞品"]}, "sort_order": 2},
+                {"name": "问题描述", "field_key": "display_issues", "field_type": "text", "sort_order": 3},
+                {"name": "陈列照片", "field_key": "display_photos", "field_type": "photo", "is_required": True, "sort_order": 4},
+            ]
+        },
+        {
+            "name": "终端到货", "code": "delivery_check", "icon": "TruckOutline", "color": "#fa8c16",
+            "description": "终端商品到货确认",
+            "fields": [
+                {"name": "到货数量", "field_key": "delivery_qty", "field_type": "number", "is_required": True, "sort_order": 0},
+                {"name": "商品状态", "field_key": "goods_condition", "field_type": "select",
+                 "options": {"choices": ["完好", "部分破损", "严重破损"]}, "is_required": True, "sort_order": 1},
+                {"name": "签收人", "field_key": "receiver_name", "field_type": "text", "is_required": True, "sort_order": 2},
+                {"name": "到货照片", "field_key": "delivery_photos", "field_type": "photo", "is_required": True, "sort_order": 3},
+                {"name": "备注", "field_key": "delivery_remark", "field_type": "text", "sort_order": 4},
+            ]
+        },
+    ]
+
+    for pt in preset_types:
+        existing = db.query(VisitTaskType).filter(
+            VisitTaskType.code == pt["code"],
+            VisitTaskType.is_system == True
+        ).first()
+        if existing:
+            print(f"  任务类型 [{pt['name']}] 已存在，跳过")
+            continue
+
+        task_type = VisitTaskType(
+            tenant_id=None,
+            name=pt["name"],
+            code=pt["code"],
+            description=pt["description"],
+            icon=pt["icon"],
+            color=pt["color"],
+            is_system=True,
+            is_active=True,
+            sort_order=preset_types.index(pt),
+        )
+        db.add(task_type)
+        db.flush()
+
+        for f in pt["fields"]:
+            field = VisitTaskTypeField(
+                task_type_id=task_type.id,
+                name=f["name"],
+                field_key=f["field_key"],
+                field_type=f["field_type"],
+                options=f.get("options"),
+                is_required=f.get("is_required", False),
+                sort_order=f.get("sort_order", 0),
+            )
+            db.add(field)
+
+        print(f"  任务类型 [{pt['name']}] 已创建，含 {len(pt['fields'])} 个字段")
+
+    db.commit()
+
+
 def main():
     print("=" * 50)
     print("外勤管理系统 - 数据库初始化")
@@ -246,6 +330,7 @@ def main():
         create_super_admin(db)
         init_permissions_and_roles(db)
         init_fields_and_template(db)
+        init_visit_task_types(db)
     finally:
         db.close()
 

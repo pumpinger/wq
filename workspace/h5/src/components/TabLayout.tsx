@@ -1,10 +1,11 @@
 import React from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { TabBar } from 'antd-mobile';
-import { TeamOutline, GlobalOutline, UserOutline } from 'antd-mobile-icons';
+import { TeamOutline, GlobalOutline, UserOutline, CalendarOutline } from 'antd-mobile-icons';
 
 const tabs = [
   { key: '/customers', title: '我的客户', icon: <TeamOutline /> },
+  { key: '/visits', title: '工作', icon: <CalendarOutline /> },
   { key: '/pool', title: '客户公海', icon: <GlobalOutline /> },
   { key: '/me', title: '我的', icon: <UserOutline /> },
 ];

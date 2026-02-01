@@ -23,3 +23,12 @@ export const queryKeys = {
     list: () => ['regions', 'list'] as const,
   },
 };
+
+export const visitKeys = {
+  taskTypes: ['visitTaskTypes'] as const,
+  todayTasks: ['visitTodayTasks'] as const,
+  myTasks: (params?: any) => ['visitMyTasks', params] as const,
+  task: (id: number) => ['visitTask', id] as const,
+  myRecords: (params?: any) => ['visitMyRecords', params] as const,
+  record: (id: number) => ['visitRecord', id] as const,
+};

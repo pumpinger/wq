@@ -84,3 +84,64 @@ export interface UserInfo {
   tenant_id?: number;
   tenant_name?: string;
 }
+
+// 拜访相关类型
+export interface VisitTaskType {
+  id: number;
+  name: string;
+  code: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  is_system: boolean;
+  is_active: boolean;
+  fields?: VisitTaskTypeField[];
+}
+
+export interface VisitTaskTypeField {
+  id: number;
+  name: string;
+  field_key: string;
+  field_type: string; // text/number/select/multi_select/photo/rating/boolean
+  options?: any;
+  is_required: boolean;
+  sort_order: number;
+}
+
+export interface VisitTask {
+  id: number;
+  plan_id?: number;
+  customer_id: number;
+  customer_name?: string;
+  customer_address?: string;
+  customer_lat?: number;
+  customer_lng?: number;
+  task_type_id: number;
+  task_type_name?: string;
+  task_type_color?: string;
+  task_type_icon?: string;
+  assigned_to: number;
+  assignee_name?: string;
+  status: string; // pending/checked_in/completed/cancelled
+  priority: string;
+  planned_date: string;
+  remark?: string;
+  created_at: string;
+}
+
+export interface VisitRecordItem {
+  id: number;
+  customer_id: number;
+  customer_name?: string;
+  task_type_id: number;
+  task_type_name?: string;
+  check_in_time: string;
+  check_in_address?: string;
+  check_in_distance?: number;
+  check_out_time?: string;
+  duration_minutes?: number;
+  status: string;
+  remark?: string;
+  field_values?: { field_key: string; value: any }[];
+  photos?: { id: number; file_path: string; file_name?: string }[];
+}

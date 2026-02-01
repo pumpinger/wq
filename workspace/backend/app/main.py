@@ -1,5 +1,7 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from .database import engine, Base
 from .routes import (
@@ -11,7 +13,12 @@ from .routes import (
     users_router,
     roles_router,
     customer_pool_router,
-    regions_router
+    regions_router,
+    visit_task_types_router,
+    visit_plans_router,
+    visit_tasks_router,
+    visit_records_router,
+    upload_router,
 )
 
 # 创建数据库表
@@ -42,6 +49,17 @@ app.include_router(customers_router, prefix="/api")
 app.include_router(roles_router, prefix="/api")
 app.include_router(customer_pool_router, prefix="/api")
 app.include_router(regions_router, prefix="/api")
+app.include_router(visit_task_types_router, prefix="/api")
+app.include_router(visit_plans_router, prefix="/api")
+app.include_router(visit_tasks_router, prefix="/api")
+app.include_router(visit_records_router, prefix="/api")
+app.include_router(upload_router, prefix="/api")
+
+
+# 静态文件服务（上传的图片）
+upload_dir = os.getenv("UPLOAD_DIR", os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads"))
+os.makedirs(upload_dir, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=upload_dir), name="uploads")
 
 
 @app.get("/")

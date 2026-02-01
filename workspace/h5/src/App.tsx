@@ -9,6 +9,10 @@ import CustomerDetail from './pages/customers/CustomerDetail';
 import CustomerForm from './pages/customers/CustomerForm';
 import PoolList from './pages/pool/PoolList';
 import Profile from './pages/me/Profile';
+import TodayTasks from './pages/visits/TodayTasks';
+import VisitExecute from './pages/visits/VisitExecute';
+import VisitHistory from './pages/visits/VisitHistory';
+import VisitDetail from './pages/visits/VisitDetail';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,12 +38,16 @@ const AppRoutes: React.FC = () => {
       <Route path="/" element={<AuthGuard><TabLayout /></AuthGuard>}>
         <Route index element={<Navigate to="/customers" replace />} />
         <Route path="customers" element={<CustomerList />} />
+        <Route path="visits" element={<TodayTasks />} />
         <Route path="pool" element={<PoolList />} />
         <Route path="me" element={<Profile />} />
       </Route>
       <Route path="/customer/add" element={<AuthGuard><CustomerForm /></AuthGuard>} />
       <Route path="/customer/:id" element={<AuthGuard><CustomerDetail /></AuthGuard>} />
       <Route path="/customer/:id/edit" element={<AuthGuard><CustomerForm /></AuthGuard>} />
+      <Route path="/visit/execute/:taskId" element={<AuthGuard><VisitExecute /></AuthGuard>} />
+      <Route path="/visit/history" element={<AuthGuard><VisitHistory /></AuthGuard>} />
+      <Route path="/visit/:recordId" element={<AuthGuard><VisitDetail /></AuthGuard>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

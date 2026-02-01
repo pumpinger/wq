@@ -70,3 +70,105 @@ export interface CustomFieldFilter {
   operator: CustomFieldFilterOperator;
   value: any;
 }
+
+// 拜访任务类型
+export interface VisitTaskTypeField {
+  id: number;
+  name: string;
+  field_key: string;
+  field_type: string;
+  options?: any;
+  is_required: boolean;
+  sort_order: number;
+}
+
+export interface VisitTaskType {
+  id: number;
+  tenant_id?: number;
+  name: string;
+  code: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  is_system: boolean;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  fields?: VisitTaskTypeField[];
+}
+
+export interface VisitPlan {
+  id: number;
+  tenant_id: number;
+  title: string;
+  plan_date: string;
+  assigned_to: number;
+  assignee_name?: string;
+  created_by: number;
+  status: string;
+  remark?: string;
+  task_count: number;
+  completed_count: number;
+  created_at: string;
+  tasks?: VisitTaskBrief[];
+}
+
+export interface VisitTaskBrief {
+  id: number;
+  customer_id: number;
+  customer_name?: string;
+  task_type_id: number;
+  task_type_name?: string;
+  status: string;
+  priority: string;
+  sort_order: number;
+}
+
+export interface VisitTask {
+  id: number;
+  tenant_id: number;
+  plan_id?: number;
+  customer_id: number;
+  customer_name?: string;
+  customer_address?: string;
+  task_type_id: number;
+  task_type_name?: string;
+  task_type_color?: string;
+  assigned_to: number;
+  assignee_name?: string;
+  status: string;
+  priority: string;
+  planned_date: string;
+  remark?: string;
+  created_at: string;
+}
+
+export interface VisitRecord {
+  id: number;
+  tenant_id: number;
+  task_id?: number;
+  customer_id: number;
+  customer_name?: string;
+  user_id: number;
+  user_name?: string;
+  task_type_id: number;
+  task_type_name?: string;
+  check_in_time: string;
+  check_in_address?: string;
+  check_in_distance?: number;
+  check_out_time?: string;
+  duration_minutes?: number;
+  status: string;
+  remark?: string;
+  created_at: string;
+  field_values?: { field_key: string; value: any }[];
+  photos?: { id: number; file_path: string; file_name?: string }[];
+}
+
+export interface VisitStatsSummary {
+  total_visits: number;
+  completed_visits: number;
+  completion_rate: number;
+  avg_duration_minutes: number;
+  total_customers_visited: number;
+}

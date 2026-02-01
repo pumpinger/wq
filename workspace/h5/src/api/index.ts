@@ -87,3 +87,34 @@ export const poolApi = {
     api.post(`/customers/pool/${customerId}/release`, { reason }),
   history: (customerId: number) => api.get(`/customers/pool/${customerId}/history`),
 };
+
+// 拜访 API
+export const visitApi = {
+  // 任务类型
+  getTaskTypes: () => api.get('/visit-task-types/'),
+  getTaskType: (id: number) => api.get(`/visit-task-types/${id}`),
+  // 今日任务
+  todayTasks: () => api.get('/visit-tasks/my/today'),
+  myTasks: (params?: { date_from?: string; date_to?: string; status?: string; skip?: number; limit?: number }) =>
+    api.get('/visit-tasks/my/list', { params }),
+  getTask: (id: number) => api.get(`/visit-tasks/${id}`),
+  // 签到/签退
+  checkIn: (taskId: number, data: { lat: number; lng: number; address?: string }) =>
+    api.post(`/visit-tasks/${taskId}/check-in`, data),
+  complete: (taskId: number, data: { field_values?: any[]; photos?: string[]; remark?: string; check_out_lat?: number; check_out_lng?: number }) =>
+    api.post(`/visit-tasks/${taskId}/complete`, data),
+  // 临时任务
+  createTask: (data: any) => api.post('/visit-tasks/', data),
+  // 拜访记录
+  myRecords: (params?: { date_from?: string; date_to?: string; skip?: number; limit?: number }) =>
+    api.get('/visit-records/my', { params }),
+  getRecord: (id: number) => api.get(`/visit-records/${id}`),
+  // 图片上传
+  uploadImage: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/upload/image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+};

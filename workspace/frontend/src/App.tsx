@@ -13,6 +13,8 @@ import {
   SafetyOutlined,
   EnvironmentOutlined,
   InboxOutlined,
+  CalendarOutlined,
+  FileSearchOutlined,
 } from '@ant-design/icons';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import zhCN from 'antd/locale/zh_CN';
@@ -27,6 +29,10 @@ import RoleList from './pages/tenant/RoleList';
 import RegionList from './pages/tenant/RegionList';
 import CustomerMap from './pages/CustomerMap';
 import CustomerPool from './pages/CustomerPool';
+import VisitTaskTypeList from './pages/VisitTaskTypeList';
+import VisitPlanList from './pages/VisitPlanList';
+import VisitTaskList from './pages/VisitTaskList';
+import VisitRecordList from './pages/VisitRecordList';
 import ErrorBoundary from './components/ErrorBoundary';
 
 const { Header, Content, Sider } = Layout;
@@ -126,6 +132,35 @@ const AppContent: React.FC = () => {
       label: '客户公海',
     });
 
+    // 拜访管理
+    items.push({
+      key: 'visit',
+      icon: <CalendarOutlined />,
+      label: '拜访管理',
+      children: [
+        {
+          key: 'visit-plans',
+          icon: <CalendarOutlined />,
+          label: '拜访计划',
+        },
+        {
+          key: 'visit-tasks',
+          icon: <FormOutlined />,
+          label: '拜访任务',
+        },
+        {
+          key: 'visit-records',
+          icon: <FileSearchOutlined />,
+          label: '拜访记录',
+        },
+        {
+          key: 'visit-dashboard',
+          icon: <AppstoreOutlined />,
+          label: '拜访统计',
+        },
+      ],
+    });
+
     // 配置菜单（管理员）
     if (user?.is_super_admin || user?.role === 'tenant_admin') {
       items.push({
@@ -152,6 +187,11 @@ const AppContent: React.FC = () => {
             key: 'regions',
             icon: <EnvironmentOutlined />,
             label: '区域管理',
+          },
+          {
+            key: 'visit-task-types',
+            icon: <CalendarOutlined />,
+            label: '拜访任务类型',
           },
         ],
       });
@@ -181,6 +221,16 @@ const AppContent: React.FC = () => {
         return <RoleList />;
       case 'regions':
         return <RegionList />;
+      case 'visit-task-types':
+        return <VisitTaskTypeList />;
+      case 'visit-plans':
+        return <VisitPlanList />;
+      case 'visit-tasks':
+        return <VisitTaskList />;
+      case 'visit-records':
+        return <VisitRecordList />;
+      case 'visit-dashboard':
+        return <VisitRecordList />;
       default:
         return <CustomerList />;
     }
@@ -271,7 +321,7 @@ const AppContent: React.FC = () => {
           <Menu
             mode="inline"
             selectedKeys={[selectedKey]}
-            defaultOpenKeys={['settings']}
+            defaultOpenKeys={['settings', 'visit']}
             onClick={({ key }) => setSelectedKey(key)}
             style={{ height: '100%', borderRight: 0 }}
             items={getMenuItems()}
