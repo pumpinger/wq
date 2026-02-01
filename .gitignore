@@ -1,8 +1,31 @@
-.idea
+# IDE
+.idea/
+.vscode/
+
+# Python
 __pycache__/
 *.pyc
+*.pyo
 .pytest_cache/
+*.egg-info/
+
+# Node
 node_modules/
 dist/
-*.log
+
+# 环境变量（含敏感信息）
 .env
+
+# 日志
+*.log
+
+# OS
+nul
+.DS_Store
+Thumbs.db
+
+# 截图/临时文件
+screenshots/
+
+# Claude Code
+.claude/settings.local.json
