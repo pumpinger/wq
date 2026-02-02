@@ -32,6 +32,9 @@ class TenantUpdate(BaseModel):
     contact_name: Optional[str] = None
     contact_phone: Optional[str] = None
     enable_region_scope: Optional[bool] = None
+    enable_customer: Optional[bool] = None
+    enable_attendance: Optional[bool] = None
+    enable_visit: Optional[bool] = None
 
 
 class TenantResponse(TenantBase):
@@ -39,6 +42,9 @@ class TenantResponse(TenantBase):
     id: int
     status: str
     enable_region_scope: bool = False
+    enable_customer: bool = True
+    enable_attendance: bool = False
+    enable_visit: bool = True
     created_at: datetime
     updated_at: datetime
     user_count: int = 0

@@ -13,6 +13,8 @@ import TodayTasks from './pages/visits/TodayTasks';
 import VisitExecute from './pages/visits/VisitExecute';
 import VisitHistory from './pages/visits/VisitHistory';
 import VisitDetail from './pages/visits/VisitDetail';
+import AttendancePunch from './pages/attendance/AttendancePunch';
+import AttendanceCalendar from './pages/attendance/AttendanceCalendar';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,6 +41,7 @@ const AppRoutes: React.FC = () => {
         <Route index element={<Navigate to="/customers" replace />} />
         <Route path="customers" element={<CustomerList />} />
         <Route path="visits" element={<TodayTasks />} />
+        <Route path="attendance" element={<AttendancePunch />} />
         <Route path="pool" element={<PoolList />} />
         <Route path="me" element={<Profile />} />
       </Route>
@@ -48,6 +51,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/visit/execute/:taskId" element={<AuthGuard><VisitExecute /></AuthGuard>} />
       <Route path="/visit/history" element={<AuthGuard><VisitHistory /></AuthGuard>} />
       <Route path="/visit/:recordId" element={<AuthGuard><VisitDetail /></AuthGuard>} />
+      <Route path="/attendance/calendar" element={<AuthGuard><AttendanceCalendar /></AuthGuard>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

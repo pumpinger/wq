@@ -15,6 +15,10 @@ import {
   InboxOutlined,
   CalendarOutlined,
   FileSearchOutlined,
+  ClockCircleOutlined,
+  ScheduleOutlined,
+  BarChartOutlined,
+  AccountBookOutlined,
 } from '@ant-design/icons';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import zhCN from 'antd/locale/zh_CN';
@@ -33,6 +37,11 @@ import VisitTaskTypeList from './pages/VisitTaskTypeList';
 import VisitPlanList from './pages/VisitPlanList';
 import VisitTaskList from './pages/VisitTaskList';
 import VisitRecordList from './pages/VisitRecordList';
+import SubscriptionOrderList from './pages/admin/SubscriptionOrderList';
+import AttendanceConfig from './pages/attendance/AttendanceConfig';
+import AttendanceSchedule from './pages/attendance/AttendanceSchedule';
+import AttendanceRecordList from './pages/attendance/AttendanceRecordList';
+import AttendanceStats from './pages/attendance/AttendanceStats';
 import ErrorBoundary from './components/ErrorBoundary';
 
 const { Header, Content, Sider } = Layout;
@@ -101,8 +110,16 @@ const AppContent: React.FC = () => {
         icon: <BankOutlined />,
         label: '租户管理',
       });
-      return items; // 平台模式只显示租户管理
+      items.push({
+        key: 'subscriptions',
+        icon: <AccountBookOutlined />,
+        label: '订阅管理',
+      });
+      return items; // 平台模式只显示租户管理+订阅管理
     }
+
+    // 模块开关判断
+    const modules = user?.enabled_modules;
 
     // 超级管理员 - 租户管理模式 或 租户管理员
     if (user?.is_super_admin || user?.role === 'tenant_admin') {
@@ -113,53 +130,53 @@ const AppContent: React.FC = () => {
       });
     }
 
-    // 业务菜单（所有用户）
-    items.push({
-      key: 'customers',
-      icon: <TeamOutlined />,
-      label: '客户管理',
-    });
-
-    items.push({
-      key: 'customer-map',
-      icon: <EnvironmentOutlined />,
-      label: '客户分布',
-    });
-
-    items.push({
-      key: 'customer-pool',
-      icon: <InboxOutlined />,
-      label: '客户公海',
-    });
+    // 业务菜单 — 根据模块开关显示
+    if (!modules || modules.customer !== false) {
+      items.push({
+        key: 'customers',
+        icon: <TeamOutlined />,
+        label: '客户管理',
+      });
+      items.push({
+        key: 'customer-map',
+        icon: <EnvironmentOutlined />,
+        label: '客户分布',
+      });
+      items.push({
+        key: 'customer-pool',
+        icon: <InboxOutlined />,
+        label: '客户公海',
+      });
+    }
 
     // 拜访管理
-    items.push({
-      key: 'visit',
-      icon: <CalendarOutlined />,
-      label: '拜访管理',
-      children: [
-        {
-          key: 'visit-plans',
-          icon: <CalendarOutlined />,
-          label: '拜访计划',
-        },
-        {
-          key: 'visit-tasks',
-          icon: <FormOutlined />,
-          label: '拜访任务',
-        },
-        {
-          key: 'visit-records',
-          icon: <FileSearchOutlined />,
-          label: '拜访记录',
-        },
-        {
-          key: 'visit-dashboard',
-          icon: <AppstoreOutlined />,
-          label: '拜访统计',
-        },
-      ],
-    });
+    if (!modules || modules.visit !== false) {
+      items.push({
+        key: 'visit',
+        icon: <CalendarOutlined />,
+        label: '拜访管理',
+        children: [
+          { key: 'visit-plans', icon: <CalendarOutlined />, label: '拜访计划' },
+          { key: 'visit-tasks', icon: <FormOutlined />, label: '拜访任务' },
+          { key: 'visit-records', icon: <FileSearchOutlined />, label: '拜访记录' },
+          { key: 'visit-dashboard', icon: <AppstoreOutlined />, label: '拜访统计' },
+        ],
+      });
+    }
+
+    // 考勤管理
+    if (modules?.attendance === true) {
+      items.push({
+        key: 'attendance',
+        icon: <ClockCircleOutlined />,
+        label: '考勤管理',
+        children: [
+          { key: 'attendance-records', icon: <FileSearchOutlined />, label: '考勤记录' },
+          { key: 'attendance-schedule', icon: <ScheduleOutlined />, label: '排班管理' },
+          { key: 'attendance-stats', icon: <BarChartOutlined />, label: '考勤统计' },
+        ],
+      });
+    }
 
     // 配置菜单（管理员）
     if (user?.is_super_admin || user?.role === 'tenant_admin') {
@@ -193,6 +210,11 @@ const AppContent: React.FC = () => {
             icon: <CalendarOutlined />,
             label: '拜访任务类型',
           },
+          ...(modules?.attendance === true ? [{
+            key: 'attendance-config',
+            icon: <ClockCircleOutlined />,
+            label: '考勤设置',
+          }] : []),
         ],
       });
     }
@@ -205,6 +227,8 @@ const AppContent: React.FC = () => {
     switch (selectedKey) {
       case 'tenants':
         return user?.is_super_admin ? <TenantList /> : null;
+      case 'subscriptions':
+        return user?.is_super_admin ? <SubscriptionOrderList /> : null;
       case 'users':
         return <UserList />;
       case 'customers':
@@ -231,6 +255,14 @@ const AppContent: React.FC = () => {
         return <VisitRecordList />;
       case 'visit-dashboard':
         return <VisitRecordList />;
+      case 'attendance-config':
+        return <AttendanceConfig />;
+      case 'attendance-schedule':
+        return <AttendanceSchedule />;
+      case 'attendance-records':
+        return <AttendanceRecordList />;
+      case 'attendance-stats':
+        return <AttendanceStats />;
       default:
         return <CustomerList />;
     }
@@ -321,7 +353,7 @@ const AppContent: React.FC = () => {
           <Menu
             mode="inline"
             selectedKeys={[selectedKey]}
-            defaultOpenKeys={['settings', 'visit']}
+            defaultOpenKeys={['settings', 'visit', 'attendance']}
             onClick={({ key }) => setSelectedKey(key)}
             style={{ height: '100%', borderRight: 0 }}
             items={getMenuItems()}

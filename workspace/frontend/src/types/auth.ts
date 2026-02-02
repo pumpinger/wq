@@ -9,6 +9,7 @@ export interface UserInfo {
   is_super_admin: boolean;
   tenant_id?: number;
   tenant_name?: string;
+  enabled_modules?: Record<string, boolean>;
 }
 
 // 租户信息类型

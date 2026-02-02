@@ -19,6 +19,8 @@ from .routes import (
     visit_tasks_router,
     visit_records_router,
     upload_router,
+    subscription_orders_router,
+    attendance_router,
 )
 
 # 创建数据库表
@@ -54,6 +56,8 @@ app.include_router(visit_plans_router, prefix="/api")
 app.include_router(visit_tasks_router, prefix="/api")
 app.include_router(visit_records_router, prefix="/api")
 app.include_router(upload_router, prefix="/api")
+app.include_router(subscription_orders_router, prefix="/api")
+app.include_router(attendance_router, prefix="/api")
 
 
 # 静态文件服务（上传的图片）

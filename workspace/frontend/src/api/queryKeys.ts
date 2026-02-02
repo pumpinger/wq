@@ -85,4 +85,24 @@ export const queryKeys = {
     detail: (id: number) => ['visitRecords', 'detail', id] as const,
     statsSummary: (filters?: Record<string, any>) => ['visitRecords', 'statsSummary', filters] as const,
   },
+
+  // 订阅订单
+  subscriptions: {
+    all: ['subscriptions'] as const,
+    list: (filters?: Record<string, any>) => ['subscriptions', 'list', filters] as const,
+  },
+
+  // 考勤
+  attendance: {
+    all: ['attendance'] as const,
+    config: () => ['attendance', 'config'] as const,
+    locations: () => ['attendance', 'locations'] as const,
+    shifts: () => ['attendance', 'shifts'] as const,
+    schedules: (filters?: Record<string, any>) => ['attendance', 'schedules', filters] as const,
+    todayRecord: () => ['attendance', 'todayRecord'] as const,
+    myRecords: (filters?: Record<string, any>) => ['attendance', 'myRecords', filters] as const,
+    records: (filters?: Record<string, any>) => ['attendance', 'records', filters] as const,
+    monthlyStats: (filters?: Record<string, any>) => ['attendance', 'monthlyStats', filters] as const,
+    myMonthlyStats: (filters?: Record<string, any>) => ['attendance', 'myMonthlyStats', filters] as const,
+  },
 };

@@ -118,3 +118,14 @@ export const visitApi = {
     });
   },
 };
+
+// 考勤 API
+export const attendanceApi = {
+  todayRecord: () => api.get('/attendance/records/today'),
+  punch: (data: { lat: number; lng: number; address?: string; wifi_ssid?: string; wifi_bssid?: string }) =>
+    api.post('/attendance/punch', data),
+  myRecords: (params: { year: number; month: number }) =>
+    api.get('/attendance/records/my', { params }),
+  myMonthlyStats: (params: { year: number; month: number }) =>
+    api.get('/attendance/stats/my-monthly', { params }),
+};

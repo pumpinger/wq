@@ -30,6 +30,7 @@ class UserInfo(BaseModel):
     is_super_admin: bool
     tenant_id: Optional[int] = None
     tenant_name: Optional[str] = None
+    enabled_modules: Optional[dict] = None
 
     class Config:
         from_attributes = True

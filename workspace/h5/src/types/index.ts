@@ -83,6 +83,7 @@ export interface UserInfo {
   is_super_admin: boolean;
   tenant_id?: number;
   tenant_name?: string;
+  enabled_modules?: Record<string, boolean>;
 }
 
 // 拜访相关类型
@@ -144,4 +145,32 @@ export interface VisitRecordItem {
   remark?: string;
   field_values?: { field_key: string; value: any }[];
   photos?: { id: number; file_path: string; file_name?: string }[];
+}
+
+// 考勤类型
+export interface AttendanceRecord {
+  id: number;
+  user_id: number;
+  user_name?: string;
+  work_date: string;
+  shift_name?: string;
+  punch_in_time?: string;
+  punch_in_address?: string;
+  punch_in_status?: string;
+  punch_out_time?: string;
+  punch_out_address?: string;
+  punch_out_status?: string;
+  work_hours?: number;
+  status: string;
+}
+
+export interface MonthlyStatsItem {
+  user_id: number;
+  user_name?: string;
+  total_days: number;
+  normal_days: number;
+  late_days: number;
+  early_leave_days: number;
+  absent_days: number;
+  total_work_hours: number;
 }

@@ -12,6 +12,8 @@ from .visit_plans import router as visit_plans_router
 from .visit_tasks import router as visit_tasks_router
 from .visit_records import router as visit_records_router
 from .upload import router as upload_router
+from .subscription_orders import router as subscription_orders_router
+from .attendance import router as attendance_router
 
 __all__ = [
     "field_definitions_router",
@@ -28,4 +30,6 @@ __all__ = [
     "visit_tasks_router",
     "visit_records_router",
     "upload_router",
+    "subscription_orders_router",
+    "attendance_router",
 ]

@@ -216,4 +216,49 @@ export const visitRecordApi = {
     api.get('/visit-records/stats/by-user', { params }),
 };
 
+// 订阅订单管理（超管）
+export const subscriptionApi = {
+  list: (params?: { page?: number; page_size?: number; status?: string; tenant_id?: number }) =>
+    api.get('/subscription-orders/', { params }),
+  create: (data: any) => api.post('/subscription-orders/', data),
+  update: (id: number, data: any) => api.put(`/subscription-orders/${id}`, data),
+  activate: (id: number) => api.post(`/subscription-orders/${id}/activate`),
+  cancel: (id: number) => api.post(`/subscription-orders/${id}/cancel`),
+};
+
+// 考勤管理
+export const attendanceApi = {
+  // 配置
+  getConfig: () => api.get('/attendance/config'),
+  updateConfig: (data: any) => api.put('/attendance/config', data),
+  // 打卡地点
+  listLocations: () => api.get('/attendance/locations'),
+  createLocation: (data: any) => api.post('/attendance/locations', data),
+  updateLocation: (id: number, data: any) => api.put(`/attendance/locations/${id}`, data),
+  deleteLocation: (id: number) => api.delete(`/attendance/locations/${id}`),
+  // 班次
+  listShifts: () => api.get('/attendance/shifts'),
+  createShift: (data: any) => api.post('/attendance/shifts', data),
+  updateShift: (id: number, data: any) => api.put(`/attendance/shifts/${id}`, data),
+  deleteShift: (id: number) => api.delete(`/attendance/shifts/${id}`),
+  // 排班
+  listSchedules: (params: { start_date: string; end_date: string; user_id?: number }) =>
+    api.get('/attendance/schedules', { params }),
+  batchSchedule: (data: { items: any[] }) => api.post('/attendance/schedules/batch', data),
+  // 打卡
+  punch: (data: { lat: number; lng: number; address?: string; wifi_ssid?: string; wifi_bssid?: string }) =>
+    api.post('/attendance/punch', data),
+  // 记录
+  todayRecord: () => api.get('/attendance/records/today'),
+  myRecords: (params: { year: number; month: number }) =>
+    api.get('/attendance/records/my', { params }),
+  listRecords: (params: { start_date: string; end_date: string; user_id?: number; status?: string; page?: number; page_size?: number }) =>
+    api.get('/attendance/records', { params }),
+  // 统计
+  monthlyStats: (params: { year: number; month: number }) =>
+    api.get('/attendance/stats/monthly', { params }),
+  myMonthlyStats: (params: { year: number; month: number }) =>
+    api.get('/attendance/stats/my-monthly', { params }),
+};
+
 export default api;

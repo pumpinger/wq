@@ -12,6 +12,14 @@ from .visit_task_type import VisitTaskType, VisitTaskTypeField
 from .visit_plan import VisitPlan
 from .visit_task import VisitTask
 from .visit_record import VisitRecord, VisitRecordField, VisitPhoto
+from .subscription_order import SubscriptionOrder
+from .attendance import (
+    AttendanceConfig,
+    AttendanceLocation,
+    AttendanceShift,
+    AttendanceSchedule,
+    AttendanceRecord,
+)
 
 __all__ = [
     "FieldDefinition",
@@ -35,4 +43,10 @@ __all__ = [
     "VisitRecord",
     "VisitRecordField",
     "VisitPhoto",
+    "SubscriptionOrder",
+    "AttendanceConfig",
+    "AttendanceLocation",
+    "AttendanceShift",
+    "AttendanceSchedule",
+    "AttendanceRecord",
 ]

@@ -51,6 +51,7 @@ def login(
 
     # 检查租户状态（非超管用户）
     tenant_name = None
+    enabled_modules = None
     if not user.is_super_admin and user.tenant_id:
         tenant = db.query(Tenant).filter(Tenant.id == user.tenant_id).first()
         if not tenant or tenant.status != "active":
@@ -59,6 +60,11 @@ def login(
                 detail="租户已被禁用或不存在"
             )
         tenant_name = tenant.name
+        enabled_modules = {
+            "customer": tenant.enable_customer if tenant.enable_customer is not None else True,
+            "attendance": tenant.enable_attendance if tenant.enable_attendance is not None else False,
+            "visit": tenant.enable_visit if tenant.enable_visit is not None else True,
+        }
 
     # 生成 Token
     access_token = create_access_token(
@@ -78,7 +84,8 @@ def login(
             role=user.role,
             is_super_admin=user.is_super_admin,
             tenant_id=user.tenant_id,
-            tenant_name=tenant_name
+            tenant_name=tenant_name,
+            enabled_modules=enabled_modules
         )
     )
 
@@ -90,10 +97,16 @@ def get_current_user_info(
 ):
     """获取当前用户信息"""
     tenant_name = None
+    enabled_modules = None
     if current_user.tenant_id:
         tenant = db.query(Tenant).filter(Tenant.id == current_user.tenant_id).first()
         if tenant:
             tenant_name = tenant.name
+            enabled_modules = {
+                "customer": tenant.enable_customer if tenant.enable_customer is not None else True,
+                "attendance": tenant.enable_attendance if tenant.enable_attendance is not None else False,
+                "visit": tenant.enable_visit if tenant.enable_visit is not None else True,
+            }
 
     return UserInfo(
         id=current_user.id,
@@ -104,7 +117,8 @@ def get_current_user_info(
         role=current_user.role,
         is_super_admin=current_user.is_super_admin,
         tenant_id=current_user.tenant_id,
-        tenant_name=tenant_name
+        tenant_name=tenant_name,
+        enabled_modules=enabled_modules
     )
 
 

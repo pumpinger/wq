@@ -23,5 +23,8 @@ class Tenant(Base):
     contact_name = Column(String(50), nullable=True, comment="联系人")
     contact_phone = Column(String(20), nullable=True, comment="联系电话")
     enable_region_scope = Column(Boolean, default=False, comment="是否启用区域权限")
+    enable_customer = Column(Boolean, default=True, comment="启用客户管理")
+    enable_attendance = Column(Boolean, default=False, comment="启用考勤管理")
+    enable_visit = Column(Boolean, default=True, comment="启用拜访管理")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

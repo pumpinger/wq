@@ -11,36 +11,16 @@
 """
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from app.main import app
-from app.database import Base, get_db
 from app.models import Tenant, FieldDefinition, CustomerTemplate, TemplateField, Customer, CustomerFieldValue
 from app.models.user import User
 from app.models.customer_pool import CustomerPoolRecord
 from app.core.security import get_password_hash
 
-# 使用内存SQLite数据库进行测试
-SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# 使用 conftest.py 提供的共享数据库配置
+from .conftest import TestingSessionLocal
 
-
-def override_get_db():
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-app.dependency_overrides[get_db] = override_get_db
 client = TestClient(app)
 
 
@@ -62,10 +42,8 @@ ctx = TestContext()
 
 
 @pytest.fixture(autouse=True, scope="module")
-def setup_database():
-    """初始化数据库和基础数据"""
-    Base.metadata.create_all(bind=engine)
-
+def setup_test_data():
+    """初始化基础测试数据（数据库已由 conftest 创建）"""
     db = TestingSessionLocal()
     try:
         # 创建超级管理员
@@ -154,8 +132,7 @@ def setup_database():
         db.close()
 
     yield
-
-    Base.metadata.drop_all(bind=engine)
+    # 不需要 drop_all，由 conftest session-scoped fixture 处理
 
 
 def login(username: str, password: str) -> str:
